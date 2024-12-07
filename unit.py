@@ -1,19 +1,26 @@
+import random
 from model import Model
 from armor import ARMOR_SAVES
-import random
 from dice import roll_dice
+
 class Unit:
-    def __init__(self, name, num_models, wounds_per_model, armor, keywords, missile_attack_dice, melee_attack_dice, movement, attack_range):
+    def __init__(self, name, num_models, wounds_per_model, armor, movement, ap_cost, missile_attack_dice, melee_attack_dice, 
+                 attack_range, special_rules=None, keywords=None):
         self.name = name
         self.num_models = num_models
         self.wounds_per_model = wounds_per_model
         self.armor = armor
-        self.keywords = keywords  # List of keywords
+        self.movement = movement
+        self.ap_cost = ap_cost  # Action Point cost
         self.missile_attack_dice = missile_attack_dice
         self.melee_attack_dice = melee_attack_dice
+        self.attack_range = attack_range  # Missile range in inches
+        self.special_rules = special_rules if special_rules else []
+        self.keywords = keywords if keywords else []  # List of keywords
         self.models = [Model(wounds_per_model) for _ in range(num_models)]
-        self.movement = movement  # Movement in inches
-        self.attack_range  = attack_range   # Missile range in inches
+        self.position = None  # (x, y) position on the battlefield
+        self.in_melee = False
+        self.has_activated = False
         self.alive = True
         self.shields_remaining = self._get_keyword_value('Shields', default=0)
 
@@ -29,7 +36,7 @@ class Unit:
         return any(model.is_alive() for model in self.models)
 
     def get_armor_save(self, phase='melee'):
-        save = ARMOR_SAVES[self.armor]
+        save = ARMOR_SAVES.get(self.armor, 6)
         if phase == 'missile' and 'Camouflage' in self.keywords:
             save += 1
         return max(2, min(save, 6))
@@ -101,9 +108,11 @@ class Unit:
             num_models=self.num_models,
             wounds_per_model=self.wounds_per_model,
             armor=self.armor,
-            keywords=self.keywords.copy(),
+            movement=self.movement,
+            ap_cost=self.ap_cost,
             missile_attack_dice=self.missile_attack_dice.copy(),
             melee_attack_dice=self.melee_attack_dice.copy(),
-            movement=self.movement,
             attack_range=self.attack_range,
+            special_rules=self.special_rules.copy(),
+            keywords=self.keywords.copy(),
         )

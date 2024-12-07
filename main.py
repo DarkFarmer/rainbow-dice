@@ -6,25 +6,30 @@ def main():
         name="Solar Knights",
         num_models=5,
         wounds_per_model=2,
-        attack_range=18,
-        movement=6,
         armor='Medium Armor',
-        keywords=['Withering Fire'],
+        movement=6,
+        ap_cost=4,
         missile_attack_dice=['Blue'] * 5,
-        melee_attack_dice=['Green'] * 5
+        melee_attack_dice=['Green'] * 5,
+        attack_range=18,
+        special_rules=None,  # No special rules provided for this unit
+        keywords=['Withering Fire']
     )
 
     unit2 = Unit(
         name="Alien Warriors",
         num_models=10,
-        attack_range=0,
-        movement=8,
         wounds_per_model=1,
         armor='Light Armor',
-        keywords=['Relentless'],
-        missile_attack_dice=[],
-        melee_attack_dice=['Pink'] * 10
+        movement=8,
+        ap_cost=3,
+        missile_attack_dice=[],  # No missile attack dice for this unit
+        melee_attack_dice=['Pink'] * 10,
+        attack_range=0,
+        special_rules=None,  # No special rules provided for this unit
+        keywords=['Relentless']
     )
+
 
     simulate_multiple_battles(unit1, unit2, num_battles=1000)
 

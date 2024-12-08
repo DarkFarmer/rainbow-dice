@@ -1,7 +1,6 @@
-from unit import Unit
 import random
 
-def simulate_battle(unit_a, unit_b):
+def simulate_fight(unit_a, unit_b):
     turn = 1
     phase = 'missile'
     total_wounds_by_phase = {
@@ -52,53 +51,10 @@ def simulate_battle(unit_a, unit_b):
 
     survivors = unit_a.num_models if unit_a.is_alive() else unit_b.num_models
     winning_unit = unit_a.name if unit_a.is_alive() else unit_b.name
+    print("battle happened, winner was " + winning_unit)
     return {
         "winner": winning_unit,
         "survivors": survivors,
         "turns": turn,
         "wounds_by_phase": total_wounds_by_phase,
     }
-
-def simulate_multiple_battles(unit_a, unit_b, num_battles=100):
-    battle_results = []
-    total_wounds = {
-        unit_a.name: {'missile': 0, 'melee': 0},
-        unit_b.name: {'missile': 0, 'melee': 0},
-    }
-    unit_a_wins = 0
-    unit_b_wins = 0
-
-    for _ in range(num_battles):
-        unit_a_clone = unit_a.clone()
-        unit_b_clone = unit_b.clone()
-        result = simulate_battle(unit_a_clone, unit_b_clone)
-        battle_results.append(result)
-
-        if result['winner'] == unit_a.name:
-            unit_a_wins += 1
-        else:
-            unit_b_wins += 1
-
-        for phase in ['missile', 'melee']:
-            total_wounds[unit_a.name][phase] += result['wounds_by_phase'][unit_a.name][phase]
-            total_wounds[unit_b.name][phase] += result['wounds_by_phase'][unit_b.name][phase]
-
-    average_wounds_per_phase = {
-        unit_a.name: {
-            phase: total_wounds[unit_a.name][phase] / num_battles for phase in ['missile', 'melee']
-        },
-        unit_b.name: {
-            phase: total_wounds[unit_b.name][phase] / num_battles for phase in ['missile', 'melee']
-        },
-    }
-
-    print(f"\n{unit_a.name} Win Rate: {unit_a_wins / num_battles * 100:.2f}%")
-    print(f"{unit_b.name} Win Rate: {unit_b_wins / num_battles * 100:.2f}%")
-
-    print("\nAverage Wounds Per Attack:")
-    print(f"{unit_a.name}:")
-    print(f"  Missile: {average_wounds_per_phase[unit_a.name]['missile']:.2f}")
-    print(f"  Melee: {average_wounds_per_phase[unit_a.name]['melee']:.2f}")
-    print(f"{unit_b.name}:")
-    print(f"  Missile: {average_wounds_per_phase[unit_b.name]['missile']:.2f}")
-    print(f"  Melee: {average_wounds_per_phase[unit_b.name]['melee']:.2f}")

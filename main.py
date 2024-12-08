@@ -1,5 +1,7 @@
 from unit import Unit
-from simulation import simulate_multiple_battles
+import game
+from player import Player
+import battlefield
 
 def main():
     unit1 = Unit(
@@ -30,8 +32,21 @@ def main():
         keywords=['Relentless']
     )
 
+    player1 = Player(
+        name="Frank",
+        units = [unit1, unit1]
+    )
+    
+    player2 = Player(
+        name="Dee",
+        units = [unit2, unit2, unit2]
+    )
 
-    simulate_multiple_battles(unit1, unit2, num_battles=1000)
+    cp1 = battlefield.ControlPoint(3,5)
+    cp2 = battlefield.ControlPoint(2,3)
+
+
+    game.play_game(player1, player2, battlefield.Battlefield(6,4,[cp1, cp2],[]))
 
 if __name__ == "__main__":
     main()

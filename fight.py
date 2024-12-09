@@ -31,7 +31,6 @@ def simulate_fight(unit_a, unit_b, initial_distance=24, phase = 'missile'):
         if not defending_unit.is_alive():
             winner = active_unit.name
             survivors = active_unit.num_models
-            print("battle happened, winner was " + winner)
             return {
                 "winner": winner,
                 "survivors": survivors,
@@ -48,7 +47,6 @@ def simulate_fight(unit_a, unit_b, initial_distance=24, phase = 'missile'):
             # Defending unit died in melee
             winner = active_unit.name
             survivors = active_unit.num_models
-            print("battle happened, winner was " + winner)
             return {
                 "winner": winner,
                 "survivors": survivors,
@@ -58,7 +56,6 @@ def simulate_fight(unit_a, unit_b, initial_distance=24, phase = 'missile'):
 
     # If we get here, both units are still alive after one sequence of attacks.
     # No winner this round.
-    print("battle happened, but no unit was destroyed this attack sequence")
     return {
         "winner": None,
         "survivors": None,

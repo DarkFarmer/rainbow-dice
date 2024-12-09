@@ -45,51 +45,34 @@ class Unit:
         return max(2, min(save, 6))
 
     def attack(self, target_unit, phase):
-        print(f"\n--- {self.name} ATTACKS ({phase.upper()} PHASE) ---")
         attack_dice = self.missile_attack_dice if phase == 'missile' else self.melee_attack_dice
         total_wounds = {'normal': 0, 'double': 0, 'mortal': 0}
-        print(f"Attack dice types: {attack_dice}")
         
         for dice_type in attack_dice:
             dice_result = roll_dice(dice_type)
-            print(f"Rolled dice ({dice_type}): {dice_result}")
             for key in total_wounds:
                 total_wounds[key] += dice_result.get(key, 0)
         
-        print(f"Total wounds generated: {total_wounds}")
-        
         if 'Overwatch' in self.keywords and phase == 'melee':
-            print(f"{self.name} uses Overwatch!")
             overwatch_wounds = {'normal': 0, 'double': 0, 'mortal': 0}
             for dice_type in self.missile_attack_dice:
                 dice_result = roll_dice(dice_type)
-                print(f"Overwatch dice ({dice_type}): {dice_result}")
                 for key in overwatch_wounds:
                     overwatch_wounds[key] += dice_result.get(key, 0)
-            print(f"Overwatch wounds generated: {overwatch_wounds}")
             target_unit.defend(overwatch_wounds, armor_save_modifier=0)
 
-        print(f"{self.name} attacks {target_unit.name} with wounds: {total_wounds}")
         target_unit.defend(total_wounds, armor_save_modifier=0)
 
     def defend(self, incoming_wounds, armor_save_modifier):
-        print(f"\n--- {self.name} DEFENDS ---")
-        print(f"Incoming wounds: {incoming_wounds}")
-        print(f"Armor save modifier: {armor_save_modifier}")
         
         armor_save = self.get_armor_save() + armor_save_modifier
         armor_save = max(2, min(armor_save, 6))
-        print(f"Final armor save required: {armor_save}")
         
         can_save_mortal = 'Lucky' in self.keywords
-        print(f"Can save mortal wounds: {can_save_mortal}")
 
         wounds_to_ignore = min(self.shields_remaining, sum(incoming_wounds.values()))
         self.shields_remaining -= wounds_to_ignore
         wounds_to_assign = sum(incoming_wounds.values()) - wounds_to_ignore
-
-        print(f"Wounds ignored by shields: {wounds_to_ignore}")
-        print(f"Wounds to assign: {wounds_to_assign}")
 
         wound_queue = (
             ['mortal'] * incoming_wounds['mortal'] +
@@ -97,27 +80,20 @@ class Unit:
             ['normal'] * incoming_wounds['normal']
         )[:wounds_to_assign]
 
-        print(f"Wound queue: {wound_queue}")
-
         model_index = 0
         while wound_queue and model_index < len(self.models):
             model = self.models[model_index]
             if not model.is_alive():
-                print(f"Model {model_index} is dead, skipping.")
                 model_index += 1
                 continue
             wound_type = wound_queue.pop(0)
             save_roll = random.randint(1, 6)
             save_successful = save_roll >= armor_save if wound_type != 'mortal' or can_save_mortal else False
-            print(f"Model {model_index} rolls {save_roll} for a {wound_type} wound. Success: {save_successful}")
             if not save_successful:
                 damage = 1 if wound_type == 'normal' else 2
-                print(f"Model {model_index} takes {damage} damage.")
                 model.take_wound(damage)
             if not model.is_alive():
-                print(f"Model {model_index} has died.")
                 model_index += 1
-        print(f"Remaining shields: {self.shields_remaining}")
         self.check_casualties()
 
     def check_casualties(self):
@@ -125,7 +101,6 @@ class Unit:
         self.num_models = alive_models
         if alive_models == 0:
             self.alive = False
-        print(f"Casualties: {len(self.models) - alive_models}/{len(self.models)} models dead.")
 
     def calculate_total_wounds(self):
         total_possible_wounds = len(self.models) * self.wounds_per_model

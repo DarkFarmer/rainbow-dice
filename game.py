@@ -4,6 +4,7 @@ import ap
 import util
 import random
 from board_state import get_board_state
+from user_input import user_activate_unit
 
 def play_game(player_a, player_b, battlefield):
     # Initial deployment
@@ -70,70 +71,12 @@ def play_turn(player_a, player_b, battlefield, turn_number):
     score_control_points(player_a, player_b, battlefield)
 
 def activate_unit_this_turn(active_player, opposing_player, battlefield, ap_available, active_a, turn_number):
-    # Choose one unit to activate
-    unit = ai_choose_unit_to_activate(active_player, ap_available)
-    
-    if unit is None:
-        return 0
-    
-    ap_cost = unit.ap_cost
-    if ap_cost > ap_available:
-        return 0
+    chosen_unit = user_activate_unit(active_player, opposing_player, battlefield, active_a, turn_number)
 
-    unit.has_activated = True
-
-    # Track how many times this unit has fought melee during this activation
-    melee_fights_this_activation = 0
-
-    # 1. If the unit starts in melee, it must fight first.
-    if unit.is_locked_in_melee():
-        opponent = unit.melee_opponent  # Assuming you have a reference stored
-        if opponent and opponent.is_alive():
-            simulate_fight(unit, opponent, 0, 'melee')
-            melee_fights_this_activation += 1
-
-            # Check if still locked or dead
-            if not unit.is_alive():
-                return ap_cost
-
-            if unit.is_locked_in_melee():
-                return ap_cost
-        else:
-            unit.unlock_melee()
-
-    # 2. Normal activation sequence after clearing melee
-    if not unit.is_locked_in_melee():
-        ai_move_unit_towards_control_point(unit, battlefield)
-
-    # Check for enemy in range
-    enemies = [e for e in opposing_player.units if e.is_alive()]
-    enemy_target = find_enemy_in_range(unit, enemies)
-
-    if enemy_target:
-        simulate_fight(unit, enemy_target)
-
-        if not unit.is_alive():
-            return ap_cost
-
-        if enemy_target.is_alive():
-            # Enemy survived shooting, consider charging
-            if melee_fights_this_activation < 2:  # Can only fight melee twice max
-                if can_charge_and_fight(unit, enemy_target):
-                    simulate_fight(unit, enemy_target, 0, 'melee')
-                    melee_fights_this_activation += 1
-
-                    if not unit.is_alive():
-                        return ap_cost
-
-                    if unit.is_locked_in_melee():
-                        return ap_cost
-
-    if active_a:
-        print(get_board_state(active_player, opposing_player, battlefield, turn_number, active_player))
-    else:
-        print(get_board_state(opposing_player, active_player, battlefield, turn_number, active_player))
-    # Unit finished its single activation for the turn
-    return ap_cost
+    # After user moves and optionally attacks/charges, mark AP spent
+    if chosen_unit:
+        return chosen_unit.ap_cost
+    return 0
 
 def can_charge_and_fight(unit, target):
     """

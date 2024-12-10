@@ -64,6 +64,7 @@ def main():
 
     player1_units = [
         Unit(**solar_knights_data),
+        Unit(**solar_knights_data),
         Unit(**heavy_solar_knights_data)
     ]
 

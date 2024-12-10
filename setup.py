@@ -7,8 +7,8 @@ def setup_battlefield():
     battlefield_height = 40
 
     # Grid size
-    grid_width = 6    # 6 squares along the x-axis
-    grid_height = 4   # 4 squares along the y-axis
+    grid_width = 6    # 6 squares along the x-axis (0 to 5)
+    grid_height = 4   # 4 squares along the y-axis (0 to 3)
     square_size = 10  # 10" per square
 
     # Random number of control points between 2 and 4

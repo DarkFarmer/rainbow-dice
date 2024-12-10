@@ -8,8 +8,8 @@ from user_input import user_activate_unit
 
 def play_game(player_a, player_b, battlefield):
     # Initial deployment
-    deploy_units(player_a, battlefield, side='left')
-    deploy_units(player_b, battlefield, side='right')
+    # deploy_units(player_a, battlefield, side='left')
+    # deploy_units(player_b, battlefield, side='right')
 
     for turn_number in range(1, 5):
         play_turn(player_a, player_b, battlefield, turn_number)

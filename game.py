@@ -41,15 +41,18 @@ def play_turn(player_a, player_b, battlefield, turn_number):
     first_player, second_player = (player_a, player_b) if turn_number % 2 == 1 else (player_b, player_a)
     first_ap, second_ap = (ap_a, ap_b) if first_player == player_a else (ap_b, ap_a)
 
+    # Determine activation flag order based on turn number
+    first_player_is_active = turn_number % 2 == 1
+
     # Reset activation flags
     for u in player_a.units + player_b.units:
         u.has_activated = False
 
     # Activation loop
-    while (first_ap > 0 or second_ap > 0):
+    while first_ap > 0 or second_ap > 0:
         # First player activation
         if first_ap > 0:
-            ap_spent = activate_unit_this_turn(first_player, second_player, battlefield, first_ap, True, turn_number)
+            ap_spent = activate_unit_this_turn(first_player, second_player, battlefield, first_ap, first_player_is_active, turn_number)
             if ap_spent == 0:
                 first_ap = 0
             else:
@@ -57,7 +60,7 @@ def play_turn(player_a, player_b, battlefield, turn_number):
 
         # Second player activation
         if second_ap > 0:
-            ap_spent = activate_unit_this_turn(second_player, first_player, battlefield, second_ap, False, turn_number)
+            ap_spent = activate_unit_this_turn(second_player, first_player, battlefield, second_ap, not first_player_is_active, turn_number)
             if ap_spent == 0:
                 second_ap = 0
             else:

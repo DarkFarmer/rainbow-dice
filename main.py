@@ -2,10 +2,10 @@ from unit import Unit
 import game
 from player import Player
 import battlefield
-import setup  # import your setup module
+import setup
 
 def main():
-    # Original Solar Knights
+    # Define unit data
     solar_knights_data = {
         "name": "Solar Knights",
         "num_models": 5,
@@ -62,6 +62,7 @@ def main():
         "keywords": ["Withering Fire"]
     }
 
+    # Create units
     player1_units = [
         Unit(**solar_knights_data),
         Unit(**solar_knights_data),
@@ -76,19 +77,18 @@ def main():
         Unit(**shooty_aliens_data)
     ]
 
+    # Create players
     player1 = Player(name="Frank", units=player1_units)
     player2 = Player(name="Dee", units=player2_units)
 
-    # Use the setup module to create control points and battlefield dimensions
+    # Setup battlefield
     control_points, width, height = setup.setup_battlefield()
-
-    # Create battlefield
     bf = battlefield.Battlefield(width, height, control_points, [])
 
     # Place units randomly
     setup.place_units_randomly(player1, player2)
 
-    # Play game
+    # Start the game
     game.play_game(player1, player2, bf)
 
 if __name__ == "__main__":

@@ -22,8 +22,8 @@ def setup_battlefield():
         y_square = random.randint(1, 2)  # vertical squares 1 to 2
 
         # Random coordinates within the chosen square
-        x_pos = x_square * square_size + random.uniform(0, square_size)
-        y_pos = y_square * square_size + random.uniform(0, square_size)
+        x_pos = x_square * square_size
+        y_pos = y_square * square_size
 
         cp = ControlPoint(x_pos, y_pos)
         control_points.append(cp)
@@ -31,25 +31,26 @@ def setup_battlefield():
     return control_points, battlefield_width, battlefield_height
 
 def place_units_randomly(player_a, player_b):
-    # Unit placement:
-    # Player A places units in the top row (y=0)
-    # Player B places units in the bottom row (y=3)
-    # Each unit is placed in a random 10"x10" cell along that row
-
+    """
+    Place units for two players randomly within specific 10"x10" cells.
+    Player A's units are placed in the top row (y=0),
+    and Player B's units are placed in the bottom row (y=3).
+    Coordinates are rounded to ensure exact positions.
+    """
     square_size = 10
-    
+
+    # Helper function to calculate and round position
+    def calculate_position(x_square, y_square):
+        x_pos = x_square * square_size + random.uniform(0, square_size)
+        y_pos = y_square * square_size + random.uniform(0, square_size)
+        return (round(x_pos), round(y_pos))
+
     # Place Player A units along y=0 row
     for unit in player_a.units:
         x_square = random.randint(0, 5)
-        # y is fixed at 0 row
-        x_pos = x_square * square_size + random.uniform(0, square_size)
-        y_pos = 0 * square_size + random.uniform(0, square_size)
-        unit.position = (x_pos, y_pos)
+        unit.position = calculate_position(x_square, 0)
 
     # Place Player B units along y=3 row
     for unit in player_b.units:
         x_square = random.randint(0, 5)
-        # y is fixed at 3 row
-        x_pos = x_square * square_size + random.uniform(0, square_size)
-        y_pos = 3 * square_size + random.uniform(0, square_size)
-        unit.position = (x_pos, y_pos)
+        unit.position = calculate_position(x_square, 3)

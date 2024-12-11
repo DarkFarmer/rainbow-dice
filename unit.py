@@ -3,8 +3,12 @@ from model import Model
 from armor import ARMOR_SAVES
 from dice import roll_dice
 
+
 class Unit:
-    def __init__(self, name, num_models, wounds_per_model, armor, movement, ap_cost, missile_attack_dice, melee_attack_dice, 
+    # Class-level counter for generating unique IDs
+    _id_counter = 1
+
+    def __init__(self, name, num_models, wounds_per_model, armor, movement, ap_cost, missile_attack_dice, melee_attack_dice,
                  attack_range, special_rules=None, keywords=None):
         self.name = name
         self.num_models = num_models
@@ -15,6 +19,7 @@ class Unit:
         self.missile_attack_dice = missile_attack_dice
         self.melee_attack_dice = melee_attack_dice
         self.attack_range = attack_range  # Missile range in inches
+        self.id = Unit._generate_unique_id()  # Assign unique ID
         self.special_rules = special_rules if special_rules else []
         self.keywords = keywords if keywords else []  # List of keywords
         self.models = [Model(wounds_per_model) for _ in range(num_models)]
@@ -24,6 +29,12 @@ class Unit:
         self.locked_in_melee = False
         self.alive = True
         self.shields_remaining = self._get_keyword_value('Shields', default=0)
+
+    @classmethod
+    def _generate_unique_id(cls):
+        unique_id = cls._id_counter
+        cls._id_counter += 1
+        return unique_id
 
     def is_locked_in_melee(self):
         return self.locked_in_melee

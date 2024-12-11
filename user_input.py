@@ -5,7 +5,7 @@ def user_activate_unit(active_player, opposing_player, battlefield, active_a, tu
     """
     Interactively:
     - Ask user which unit to activate (by name or ID).
-    - Move that unit to a specified position.
+    - Move that unit towards a control point or an opposing unit.
     - Let the user pick an enemy unit to target for missile attack (if in range).
     - Offer the option to charge and fight in melee if possible.
     """
@@ -37,18 +37,46 @@ def user_activate_unit(active_player, opposing_player, battlefield, active_a, tu
             print("That unit is not alive. Choose another unit.")
             chosen_unit = None
 
-    # Move unit
+    # Move unit towards a control point or an opposing unit
     print(f"Chosen unit: {chosen_unit.name} (ID: {chosen_unit.id}). Current position: {chosen_unit.position}")
-    move_x = float(input("Enter the new X coordinate to move this unit to: ").strip())
-    move_y = float(input("Enter the new Y coordinate to move this unit to: ").strip())
-    chosen_unit.position = (move_x, move_y)
-    print(f"Moved {chosen_unit.name} to position ({move_x}, {move_y})")
+
+    move_target = None
+    while not move_target:
+        move_input = input("Do you want to move towards a control point (c) or an opposing unit (u)? ").strip().lower()
+        if move_input == 'c':
+            control_points = battlefield.get_control_points()
+            print("Available control points:")
+            for cp in control_points:
+                print(f"ID: {cp.id}, X: {cp.x}, Y: {cp.y}")
+            cp_input = input("Enter the control point ID to move towards: ").strip()
+            move_target = next((cp for cp in control_points if str(cp.id) == cp_input), None)
+            if move_target:
+                target_position = (move_target.x, move_target.y)
+            else:
+                print("No matching control point found. Try again.")
+        elif move_input == 'u':
+            alive_enemies = [u for u in opposing_player.units if u.is_alive()]
+            print("Available enemy units:")
+            for e in alive_enemies:
+                print(f"ID: {e.id}, Name: {e.name}, Position: {e.position}")
+            enemy_input = input("Enter the enemy unit ID to move towards: ").strip()
+            move_target = find_unit_by_id_or_name(alive_enemies, enemy_input)
+            if move_target:
+                target_position = move_target.position
+            else:
+                print("No matching enemy unit found. Try again.")
+
+    if move_target:
+        move_distance = chosen_unit.movement
+        chosen_unit.position = util.move_towards(chosen_unit.position, target_position, move_distance)
+        print(f"Moved {chosen_unit.name} towards position {target_position}, now at {chosen_unit.position}")
 
     # Missile attack
     print("Enemy units:")
     alive_enemies = [u for u in opposing_player.units if u.is_alive()]
     for e in alive_enemies:
-        print(f"ID: {e.id}, Name: {e.name}, Position: {e.position}")
+        if util.distance(chosen_unit.position, e.position) <= chosen_unit.attack_range:
+            print(f"ID: {e.id}, Name: {e.name}, Position: {e.position}")
 
     enemy_target = None
     while True:
@@ -86,7 +114,6 @@ def user_activate_unit(active_player, opposing_player, battlefield, active_a, tu
 
     return chosen_unit
 
-
 def find_unit_by_id_or_name(units, identifier):
     """
     identifier can be an integer ID or a string name.
@@ -103,7 +130,6 @@ def find_unit_by_id_or_name(units, identifier):
         if len(matches) == 1:
             return matches[0]
         return None
-
 
 def roll_2d6():
     import random

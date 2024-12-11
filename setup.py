@@ -25,7 +25,7 @@ def setup_battlefield():
         x_pos = x_square * square_size
         y_pos = y_square * square_size
 
-        cp = ControlPoint(x_pos, y_pos)
+        cp = ControlPoint(x_pos, y_pos, _+1)
         control_points.append(cp)
 
     return control_points, battlefield_width, battlefield_height

@@ -23,7 +23,8 @@ def user_activate_unit(active_player, opposing_player, battlefield, active_a, tu
 
     print(f"Available units for {active_player.name}:")
     for u in active_player.units:
-        print(f"ID: {u.id}, Name: {u.name}, Position: {u.position}, Alive: {u.is_alive()}")
+        if not u.has_activated:
+            print(f"ID: {u.id}, Name: {u.name}, Position: {u.position}, Alive: {u.is_alive()}")
 
     # Choose unit
     chosen_unit = None
@@ -33,6 +34,9 @@ def user_activate_unit(active_player, opposing_player, battlefield, active_a, tu
         if not chosen_unit:
             print("No matching unit found. Try again.")
             continue
+        if chosen_unit.has_activated:
+            print("That unit has already been activated. Choose another unit.")
+            chosen_unit = None
         if not chosen_unit.is_alive():
             print("That unit is not alive. Choose another unit.")
             chosen_unit = None
@@ -69,6 +73,7 @@ def user_activate_unit(active_player, opposing_player, battlefield, active_a, tu
     if move_target:
         move_distance = chosen_unit.movement
         chosen_unit.position = util.move_towards(chosen_unit.position, target_position, move_distance)
+        chosen_unit.has_activated = True
         print(f"Moved {chosen_unit.name} towards position {target_position}, now at {chosen_unit.position}")
 
     # Missile attack

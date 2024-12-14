@@ -50,8 +50,16 @@ def play_turn(player_a, player_b, battlefield, turn_number):
 
     # Activation loop
     while first_ap > 0 or second_ap > 0:
+        # Check if all units of both players are either dead or already activated
+        all_units_activated_or_dead_a = all(not u.is_alive() or u.has_activated for u in first_player.units)
+        all_units_activated_or_dead_b = all(not u.is_alive() or u.has_activated for u in second_player.units)
+
+        if all_units_activated_or_dead_a and all_units_activated_or_dead_b:
+            print("All units have either been activated or are dead. Ending turn.")
+            break
+
         # First player activation
-        if first_ap > 0:
+        if first_ap > 0 and not all_units_activated_or_dead_a:
             ap_spent = activate_unit_this_turn(first_player, second_player, battlefield, first_ap, first_player_is_active, turn_number)
             if ap_spent == 0:
                 first_ap = 0
@@ -59,7 +67,7 @@ def play_turn(player_a, player_b, battlefield, turn_number):
                 first_ap -= ap_spent
 
         # Second player activation
-        if second_ap > 0:
+        if second_ap > 0 and not all_units_activated_or_dead_b:
             ap_spent = activate_unit_this_turn(second_player, first_player, battlefield, second_ap, not first_player_is_active, turn_number)
             if ap_spent == 0:
                 second_ap = 0
@@ -69,6 +77,7 @@ def play_turn(player_a, player_b, battlefield, turn_number):
         # If both players can't activate, break
         if first_ap <= 0 and second_ap <= 0:
             break
+
 
     # Scoring Phase
     score_control_points(player_a, player_b, battlefield)

@@ -37,7 +37,7 @@ def user_activate_unit(active_player, opposing_player, battlefield, active_a, tu
         if chosen_unit.has_activated:
             print("That unit has already been activated. Choose another unit.")
             chosen_unit = None
-        if not chosen_unit.is_alive():
+        if chosen_unit and not chosen_unit.is_alive():
             print("That unit is not alive. Choose another unit.")
             chosen_unit = None
 
@@ -79,31 +79,32 @@ def user_activate_unit(active_player, opposing_player, battlefield, active_a, tu
     # Missile attack
     print("Enemy units:")
     alive_enemies = [u for u in opposing_player.units if u.is_alive()]
-    for e in alive_enemies:
-        if util.distance(chosen_unit.position, e.position) <= chosen_unit.attack_range:
+    viable_targets = [e for e in alive_enemies if util.distance(chosen_unit.position, e.position) <= chosen_unit.attack_range]
+
+    if viable_targets:
+        for e in viable_targets:
             print(f"ID: {e.id}, Name: {e.name}, Position: {e.position}")
 
-    enemy_target = None
-    while True:
-        target_input = input("Enter enemy unit ID or Name to target with missile attack, or press Enter to skip: ").strip()
-        if target_input == "":
-            break
-        enemy_target = find_unit_by_id_or_name(alive_enemies, target_input)
-        if enemy_target:
-            break
-        else:
-            print("No matching enemy found. Try again or press Enter to skip.")
+        enemy_target = None
+        while True:
+            target_input = input("Enter enemy unit ID or Name to target with missile attack, or press Enter to skip: ").strip()
+            if target_input == "":
+                break
+            enemy_target = find_unit_by_id_or_name(viable_targets, target_input)
+            if enemy_target:
+                break
+            else:
+                print("No matching enemy found. Try again or press Enter to skip.")
 
-    if enemy_target:
-        dist = util.distance(chosen_unit.position, enemy_target.position)
-        if dist <= chosen_unit.attack_range:
+        if enemy_target:
             print(f"Attacking {enemy_target.name} with missile attack!")
             from fight import simulate_fight
             simulate_fight(chosen_unit, enemy_target)
-        else:
-            print(f"Target out of range. (Distance: {dist}, Range: {chosen_unit.attack_range}) Skipping missile attack.")
+    else:
+        print("No enemies in missile range. Skipping missile attack.")
 
     # Charge and melee
+    enemy_target = next((e for e in alive_enemies if util.distance(chosen_unit.position, e.position) <= 12), None)
     if enemy_target and enemy_target.is_alive():
         charge_input = input("Do you want to charge and fight melee? (y/n): ").strip().lower()
         if charge_input == 'y':
@@ -115,6 +116,7 @@ def user_activate_unit(active_player, opposing_player, battlefield, active_a, tu
                 print(f"Charging {enemy_target.name} and fighting melee!")
                 simulate_fight(chosen_unit, enemy_target, 0, 'melee')
             else:
+                chosen_unit.position = util.move_towards(chosen_unit.position, target_position, move_distance/2)
                 print("Charge failed or not favorable. No melee attack.")
 
     return chosen_unit

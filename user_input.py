@@ -1,13 +1,14 @@
 import util
 import board_state
+import random
 
 def user_activate_unit(active_player, opposing_player, battlefield, active_a, turn_number):
     """
     Interactively:
-    - Ask user which unit to activate (by name or ID).
-    - Move that unit towards a control point or an opposing unit.
-    - Let the user pick an enemy unit to target for missile attack (if in range).
-    - Offer the option to charge and fight in melee if possible.
+    - Handle melee-only activation for units in melee range.
+    - Allow normal activation if a unit destroys its melee opponent.
+    - Move towards control points or enemy units.
+    - Skip shooting and charging for additional movement.
     """
 
     if active_a:
@@ -41,6 +42,24 @@ def user_activate_unit(active_player, opposing_player, battlefield, active_a, tu
             print("That unit is not alive. Choose another unit.")
             chosen_unit = None
 
+    # Check if the unit is in melee
+    enemy_target = next(
+        (e for e in opposing_player.units if util.distance(chosen_unit.position, e.position) <= 1 and e.is_alive()),
+        None
+    )
+
+    if enemy_target:
+        print(f"{chosen_unit.name} is in melee combat with {enemy_target.name}.")
+        melee_fight(chosen_unit, enemy_target)
+
+        # If the melee target is destroyed, allow normal activation
+        if not enemy_target.is_alive():
+            print(f"{enemy_target.name} was destroyed! {chosen_unit.name} can take a normal turn.")
+        else:
+            print(f"{chosen_unit.name} finished its melee combat.")
+            chosen_unit.has_activated = True
+            return chosen_unit
+
     # Move unit towards a control point or an opposing unit
     print(f"Chosen unit: {chosen_unit.name} (ID: {chosen_unit.id}). Current position: {chosen_unit.position}")
 
@@ -73,8 +92,17 @@ def user_activate_unit(active_player, opposing_player, battlefield, active_a, tu
     if move_target:
         move_distance = chosen_unit.movement
         chosen_unit.position = util.move_towards(chosen_unit.position, target_position, move_distance)
-        chosen_unit.has_activated = True
         print(f"Moved {chosen_unit.name} towards position {target_position}, now at {chosen_unit.position}")
+
+    # Offer the option to skip shooting and charging to move an additional D6
+    skip_option = input("Do you want to skip shooting and charging to move an additional D6? (y/n): ").strip().lower()
+    if skip_option == 'y':
+        extra_move = roll_2d6()
+        target_position = util.move_towards(chosen_unit.position, target_position, extra_move)
+        chosen_unit.position = target_position
+        print(f"{chosen_unit.name} moved an additional {extra_move} inches to position {chosen_unit.position}.")
+        chosen_unit.has_activated = True
+        return chosen_unit
 
     # Missile attack
     print("Enemy units:")
@@ -116,16 +144,18 @@ def user_activate_unit(active_player, opposing_player, battlefield, active_a, tu
                 print(f"Charging {enemy_target.name} and fighting melee!")
                 simulate_fight(chosen_unit, enemy_target, 0, 'melee')
             else:
-                chosen_unit.position = util.move_towards(chosen_unit.position, target_position, move_distance/2)
                 print("Charge failed or not favorable. No melee attack.")
 
+    chosen_unit.has_activated = True
     return chosen_unit
 
+def melee_fight(chosen_unit, enemy_target):
+    """Handle melee combat."""
+    from fight import simulate_fight, melee_favorable
+    print(f"{chosen_unit.name} is engaging in melee combat with {enemy_target.name}.")
+    simulate_fight(chosen_unit, enemy_target, 0, 'melee')
+
 def find_unit_by_id_or_name(units, identifier):
-    """
-    identifier can be an integer ID or a string name.
-    If name is used and multiple units share it, user must use ID.
-    """
     try:
         unit_id = int(identifier)
         for u in units:
@@ -139,5 +169,4 @@ def find_unit_by_id_or_name(units, identifier):
         return None
 
 def roll_2d6():
-    import random
     return random.randint(1, 6) + random.randint(1, 6)

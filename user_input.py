@@ -9,6 +9,7 @@ def user_activate_unit(active_player, opposing_player, battlefield, active_a, tu
     - Allow normal activation if a unit destroys its melee opponent.
     - Move towards control points or enemy units.
     - Skip shooting and charging for additional movement.
+    - Prevent shooting at units engaged in melee.
     """
 
     if active_a:
@@ -107,7 +108,12 @@ def user_activate_unit(active_player, opposing_player, battlefield, active_a, tu
     # Missile attack
     print("Enemy units:")
     alive_enemies = [u for u in opposing_player.units if u.is_alive()]
-    viable_targets = [e for e in alive_enemies if util.distance(chosen_unit.position, e.position) <= chosen_unit.attack_range]
+    # Exclude units engaged in melee combat
+    viable_targets = [
+        e for e in alive_enemies 
+        if util.distance(chosen_unit.position, e.position) <= chosen_unit.attack_range 
+        and not any(util.distance(e.position, ally.position) <= 1 for ally in active_player.units if ally.is_alive())
+    ]
 
     if viable_targets:
         for e in viable_targets:
@@ -129,7 +135,7 @@ def user_activate_unit(active_player, opposing_player, battlefield, active_a, tu
             from fight import simulate_fight
             simulate_fight(chosen_unit, enemy_target)
     else:
-        print("No enemies in missile range. Skipping missile attack.")
+        print("No valid enemies in missile range. Skipping missile attack.")
 
     # Charge and melee
     enemy_target = next((e for e in alive_enemies if util.distance(chosen_unit.position, e.position) <= 12), None)
@@ -151,7 +157,7 @@ def user_activate_unit(active_player, opposing_player, battlefield, active_a, tu
 
 def melee_fight(chosen_unit, enemy_target):
     """Handle melee combat."""
-    from fight import simulate_fight, melee_favorable
+    from fight import simulate_fight
     print(f"{chosen_unit.name} is engaging in melee combat with {enemy_target.name}.")
     simulate_fight(chosen_unit, enemy_target, 0, 'melee')
 

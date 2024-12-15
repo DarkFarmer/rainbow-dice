@@ -19,7 +19,7 @@ def setup_battlefield():
     # That gives a 6x2 area in the middle rows of the board
     for _ in range(num_control_points):
         x_square = random.randint(0, 5)  # horizontal squares from 0 to 5
-        y_square = random.randint(1, 2)  # vertical squares 1 to 2
+        y_square = 2 # random.randint(1, 2)  # vertical squares 1 to 2
 
         # Random coordinates within the chosen square
         x_pos = x_square * square_size

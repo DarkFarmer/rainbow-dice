@@ -1,11 +1,13 @@
+# main_ai.py
+import statistics
 from unit import Unit
 import game
 from player import Player
 import battlefield
 import setup
+import random
 
-def main():
-    # Define unit data
+def setup_players():
     solar_knights_data = {
         "name": "Solar Knights",
         "num_models": 5,
@@ -62,11 +64,9 @@ def main():
         "keywords": ["Withering Fire"]
     }
 
-    # Create units
     player1_units = [
         Unit(**solar_knights_data),
         Unit(**solar_knights_data),
-        Unit(**heavy_solar_knights_data)
     ]
 
     player2_units = [
@@ -77,19 +77,36 @@ def main():
         Unit(**shooty_aliens_data)
     ]
 
-    # Create players
     player1 = Player(name="Frank", units=player1_units)
     player2 = Player(name="Dee", units=player2_units)
 
-    # Setup battlefield
-    control_points, width, height = setup.setup_battlefield()
-    bf = battlefield.Battlefield(width, height, control_points, [])
+    return player1, player2
 
-    # Place units randomly
-    setup.place_units_randomly(player1, player2)
+def run_simulation(num_games=10):
+    results = []
+    for i in range(num_games):
+        player1, player2 = setup_players()
+        control_points, width, height = setup.setup_battlefield()
+        bf = battlefield.Battlefield(width, height, control_points, [])
+        setup.place_units_randomly(player1, player2)
 
-    # Start the game
-    game.play_game(player1, player2, bf)
+        game.play_game(player1, player2, bf)
+
+        if player1.score > player2.score:
+            results.append("Player1")
+        elif player2.score > player1.score:
+            results.append("Player2")
+        else:
+            results.append("Draw")
+
+    # Print results summary
+    p1_wins = results.count("Player1")
+    p2_wins = results.count("Player2")
+    draws = results.count("Draw")
+    print(f"Out of {num_games} games:")
+    print(f"Player 1 wins: {p1_wins}")
+    print(f"Player 2 wins: {p2_wins}")
+    print(f"Draws: {draws}")
 
 if __name__ == "__main__":
-    main()
+    run_simulation(100)  # Run 100 games for testing

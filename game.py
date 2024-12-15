@@ -5,6 +5,7 @@ import util
 import random
 from board_state import get_board_state
 from user_input import user_activate_unit
+from ai_user_input import ai_activate_unit  # import our new AI function
 
 def play_game(player_a, player_b, battlefield):
     # Initial deployment
@@ -83,9 +84,7 @@ def play_turn(player_a, player_b, battlefield, turn_number):
     score_control_points(player_a, player_b, battlefield)
 
 def activate_unit_this_turn(active_player, opposing_player, battlefield, ap_available, active_a, turn_number):
-    chosen_unit = user_activate_unit(active_player, opposing_player, battlefield, active_a, turn_number)
-
-    # After user moves and optionally attacks/charges, mark AP spent
+    chosen_unit = ai_activate_unit(active_player, opposing_player, battlefield, active_a, turn_number)
     if chosen_unit:
         return chosen_unit.ap_cost
     return 0

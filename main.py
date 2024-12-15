@@ -14,7 +14,7 @@ def setup_players():
         "wounds_per_model": 2,
         "armor": "Medium Armor",
         "movement": 6,
-        "ap_cost": 4,
+        "ap_cost": 3,
         "missile_attack_dice": ['Blue'] * 5,
         "melee_attack_dice": ['Green'] * 5,
         "attack_range": 18,
@@ -28,9 +28,9 @@ def setup_players():
         "wounds_per_model": 2,
         "armor": "Heavy Armor",
         "movement": 5,
-        "ap_cost": 4,
+        "ap_cost": 3,
         "missile_attack_dice": ['Blue'] * 5,
-        "melee_attack_dice": ['Green'] * 5,
+        "melee_attack_dice": ['Purple'] * 5,
         "attack_range": 24,
         "special_rules": None,
         "keywords": ["Withering Fire", "Relentless"]
@@ -42,7 +42,7 @@ def setup_players():
         "wounds_per_model": 1,
         "armor": "Light Armor",
         "movement": 8,
-        "ap_cost": 3,
+        "ap_cost": 6,
         "missile_attack_dice": [],
         "melee_attack_dice": ['Pink'] * 10,
         "attack_range": 0,
@@ -56,9 +56,9 @@ def setup_players():
         "wounds_per_model": 1,
         "armor": "Light Armor",
         "movement": 8,
-        "ap_cost": 3,
+        "ap_cost": 6,
         "missile_attack_dice": ['Blue'] * 10,
-        "melee_attack_dice": ['Pink'] * 5,
+        "melee_attack_dice": ['Green'] * 5,
         "attack_range": 18,
         "special_rules": None,
         "keywords": ["Withering Fire"]
@@ -66,6 +66,9 @@ def setup_players():
 
     player1_units = [
         Unit(**solar_knights_data),
+        Unit(**solar_knights_data),
+        Unit(**heavy_solar_knights_data),
+        Unit(**heavy_solar_knights_data),
         Unit(**solar_knights_data),
     ]
 
@@ -109,4 +112,4 @@ def run_simulation(num_games=10):
     print(f"Draws: {draws}")
 
 if __name__ == "__main__":
-    run_simulation(100)  # Run 100 games for testing
+    run_simulation(10)  # Run 100 games for testing

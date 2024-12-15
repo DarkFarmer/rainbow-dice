@@ -1,114 +1,101 @@
-from ai import ai_choose_unit_to_activate, ai_move_unit_towards_control_point, find_enemy_in_range
+from ai_user_input import ai_activate_unit
 from fight import simulate_fight, melee_favorable
 import ap
 import util
 import random
-from board_state import get_board_state
-from user_input import user_activate_unit
-from ai_user_input import ai_activate_unit  # import our new AI function
+from board_state import get_board_state, get_board_visualization
 
 def play_game(player_a, player_b, battlefield):
-    # Initial deployment
-    # deploy_units(player_a, battlefield, side='left')
-    # deploy_units(player_b, battlefield, side='right')
-
+    # Run a fixed number of turns, for example
     for turn_number in range(1, 5):
+        print(f"\n===== START OF TURN {turn_number} =====")
         play_turn(player_a, player_b, battlefield, turn_number)
 
     # End of game
     if player_a.score > player_b.score:
-        print(f"{player_a.name} wins!")
+        print(f"{player_a.name} wins! Final Score: {player_a.score} vs {player_b.score}")
     elif player_b.score > player_a.score:
-        print(f"{player_b.name} wins!")
+        print(f"{player_b.name} wins! Final Score: {player_b.score} vs {player_a.score}")
     else:
-        print("It's a draw!")
-
-def deploy_units(player, battlefield, side='left'):
-    # Example: place units in a line on chosen side
-    if side == 'left':
-        x_positions = range(0, len(player.units)*2, 2)
-        for i, unit in enumerate(player.units):
-            unit.position = (x_positions[i], battlefield.height//2)
-    else:
-        x_positions = range(battlefield.width-1, battlefield.width - 1 - (len(player.units)*2), -2)
-        for i, unit in enumerate(player.units):
-            unit.position = (x_positions[i], battlefield.height//2)
+        print(f"It's a draw! Final Score: {player_a.score} vs {player_b.score}")
 
 def play_turn(player_a, player_b, battlefield, turn_number):
     # Determine AP for both
     ap_a, ap_b = ap.determine_ap_allocation(player_a, player_b)
 
-    # On odd turns, player_a goes first, on even turns, player_b goes first.
     first_player, second_player = (player_a, player_b) if turn_number % 2 == 1 else (player_b, player_a)
     first_ap, second_ap = (ap_a, ap_b) if first_player == player_a else (ap_b, ap_a)
-
-    # Determine activation flag order based on turn number
     first_player_is_active = turn_number % 2 == 1
 
     # Reset activation flags
     for u in player_a.units + player_b.units:
         u.has_activated = False
 
+    # Print board state at start of turn
+    state = get_board_state(player_a, player_b, battlefield, turn_number, first_player if first_player_is_active else second_player)
+    visualization = get_board_visualization(player_a, player_b, battlefield, state)
+    print("Board state at start of turn:")
+    print(visualization)
+    print(f"AP: {player_a.name}={ap_a}, {player_b.name}={ap_b}")
+
     # Activation loop
     while first_ap > 0 or second_ap > 0:
-        # Check if all units of both players are either dead or already activated
-        all_units_activated_or_dead_a = all(not u.is_alive() or u.has_activated for u in first_player.units)
-        all_units_activated_or_dead_b = all(not u.is_alive() or u.has_activated for u in second_player.units)
+        all_a_done = all(not u.is_alive() or u.has_activated for u in first_player.units)
+        all_b_done = all(not u.is_alive() or u.has_activated for u in second_player.units)
 
-        if all_units_activated_or_dead_a and all_units_activated_or_dead_b:
-            print("All units have either been activated or are dead. Ending turn.")
+        if all_a_done and all_b_done:
+            print("All units on both sides activated or dead. Ending turn early.")
             break
 
-        # First player activation
-        if first_ap > 0 and not all_units_activated_or_dead_a:
+        # If first player cannot activate a unit, we let them spend 1 AP doing nothing
+        if first_ap > 0 and all_a_done:
+            print(f"{first_player.name} has no units to activate. Forcing AP usage.")
+            first_ap -= 1
+
+        # If second player cannot activate a unit, we do the same
+        if second_ap > 0 and all_b_done:
+            print(f"{second_player.name} has no units to activate. Forcing AP usage.")
+            second_ap -= 1
+
+        # If after this both have no units and no AP to do anything meaningful, we might just break out
+        if all_a_done and all_b_done:
+            break
+
+        # Try to activate first player's unit if they still have AP and not done
+        if first_ap > 0 and not all_a_done:
             ap_spent = activate_unit_this_turn(first_player, second_player, battlefield, first_ap, first_player_is_active, turn_number)
-            if ap_spent == 0:
-                first_ap = 0
-            else:
-                first_ap -= ap_spent
+            first_ap -= ap_spent
 
-        # Second player activation
-        if second_ap > 0 and not all_units_activated_or_dead_b:
+        # Try to activate second player's unit if they still have AP and not done
+        if second_ap > 0 and not all_b_done:
             ap_spent = activate_unit_this_turn(second_player, first_player, battlefield, second_ap, not first_player_is_active, turn_number)
-            if ap_spent == 0:
-                second_ap = 0
-            else:
-                second_ap -= ap_spent
+            second_ap -= ap_spent
 
-        # If both players can't activate, break
-        if first_ap <= 0 and second_ap <= 0:
+        # If no progress is made in a loop iteration (no AP spent), consider breaking out.
+        if ap_spent == 0 and all_a_done and all_b_done:
+            # Safety check to avoid infinite loop
             break
-
 
     # Scoring Phase
     score_control_points(player_a, player_b, battlefield)
+    print(f"End of Turn {turn_number} Scores: {player_a.name}={player_a.score}, {player_b.name}={player_b.score}")
 
 def activate_unit_this_turn(active_player, opposing_player, battlefield, ap_available, active_a, turn_number):
     chosen_unit = ai_activate_unit(active_player, opposing_player, battlefield, active_a, turn_number)
-    if chosen_unit:
-        return chosen_unit.ap_cost
-    return 0
 
-def can_charge_and_fight(unit, target):
-    """
-    Check if unit can charge target.
-    Roll 2D6 and check if distance is covered and if melee is favorable.
-    """
-    distance = util.distance(unit.position, target.position)
-    charge_roll = random.randint(1,6) + random.randint(1,6)
-    favorable = melee_favorable(unit, target)
-    if charge_roll >= distance and favorable:
-        return True
-    return False
+    # After AI moves and optionally attacks/charges, mark AP spent
+    if chosen_unit:
+        print(f"{active_player.name}'s unit {chosen_unit.name} spent {chosen_unit.ap_cost} AP this activation.")
+        return chosen_unit.ap_cost
+    else:
+        return 0
 
 def score_control_points(player_a, player_b, battlefield):
     for i, cp in enumerate(battlefield.control_points, start=1):
-        a_models = util.count_models_in_range(player_a, cp, 3)
-        b_models = util.count_models_in_range(player_b, cp, 3)
+        a_models = util.count_models_in_range(player_a, cp, 6)
+        b_models = util.count_models_in_range(player_b, cp, 6)
         
         if a_models > b_models:
             player_a.score += 1
         elif b_models > a_models:
             player_b.score += 1
-    print(f"Turn Score: Player A - {player_a.score}, Player B - {player_b.score}")
-

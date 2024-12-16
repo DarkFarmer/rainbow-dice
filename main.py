@@ -49,37 +49,48 @@ def create_unit(name, num_models, movement, armor_save, wounds_per_model,
         keywords=[]
     )
 
+#--- After Run 2294960 ---
+#Basic Infantry: AP=3.639999999999966
+#Elite Infantry: AP=8.489999999999863
+#Heavy Weapons: AP=10.609999999999818
+#Fast Attack: AP=17.439999999999927
+#Mech: AP=15.18999999999972
+#Aliens: AP=10.689999999999817
+#Heavy Infantry: AP=9.799999999999836
+#Super-Heavy Infantry: AP=14.369999999999738
+#Heavy Aliens: AP=3.389999999999972
+#Tank: AP=16.579999999999792
 
 # Define all unit types from your spreadsheet (initially all AP=1)
 unit_templates = {
     "Basic Infantry": {
         "num_models": 5, "movement": 6, "armor_save": 6, "wounds": 1,
-        "melee_dice": ["White"], "ranged_dice": ["White"], "range": 12, "ap_cost": 1.5
+        "melee_dice": ["White"], "ranged_dice": ["White"], "range": 12, "ap_cost": 1
     },
     "Elite Infantry": {
         "num_models": 5, "movement": 6, "armor_save": 5, "wounds": 1,
-        "melee_dice": ["Green"], "ranged_dice": ["Green"], "range": 12, "ap_cost": 4
+        "melee_dice": ["Green"], "ranged_dice": ["Green"], "range": 12, "ap_cost": 1
     },
     "Heavy Weapons": {
         "num_models": 5, "movement": 6, "armor_save": 6, "wounds": 1,
-        "melee_dice": ["Purple"], "ranged_dice": ["Purple"], "range": 12, "ap_cost": 4
+        "melee_dice": ["Purple"], "ranged_dice": ["Purple"], "range": 12, "ap_cost": 1
     },
     "Fast Attack": {
         "num_models": 5, "movement": 12, "armor_save": 6, "wounds": 1,
-        "melee_dice": ["White"], "ranged_dice": ["White"], "range": 12, "ap_cost": 6.5
+        "melee_dice": ["White"], "ranged_dice": ["White"], "range": 12, "ap_cost": 1
     },
     "Mech": {
         "num_models": 1, "movement": 8, "armor_save": 4, "wounds": 4,
-        "melee_dice": ["Green","Green","Green","Green","Green"],
-        "ranged_dice": ["Green","Green","Green","Green","Green"], "range": 12, "ap_cost": 5
+        "melee_dice": ["Blue","Blue","Blue","Blue","Blue"],
+        "ranged_dice": ["Blue","Blue","Blue","Blue","Blue"], "range": 12, "ap_cost": 1
     },
     "Aliens": {
         "num_models": 5, "movement": 8, "armor_save": 5, "wounds": 1,
-        "melee_dice": ["Green"], "ranged_dice": [], "range": 0, "ap_cost": 4
+        "melee_dice": ["Green"], "ranged_dice": [], "range": 0, "ap_cost": 1
     },
     "Heavy Infantry": {
         "num_models": 5, "movement": 5, "armor_save": 4, "wounds": 2,
-        "melee_dice": ["Blue"], "ranged_dice": ["Blue"], "range": 12, "ap_cost": 4
+        "melee_dice": ["Blue"], "ranged_dice": ["Blue"], "range": 12, "ap_cost": 1
     },
     "Super-Heavy Infantry": {
         "num_models": 5, "movement": 5, "armor_save": 3, "wounds": 3,
@@ -87,11 +98,11 @@ unit_templates = {
     },
     "Heavy Aliens": {
         "num_models": 5, "movement": 6, "armor_save": 4, "wounds": 2,
-        "melee_dice": ["Purple"], "ranged_dice": [], "range": 0, "ap_cost": 4
+        "melee_dice": ["Purple"], "ranged_dice": [], "range": 0, "ap_cost": 1
     },
     "Tank": {
         "num_models": 1, "movement": 10, "armor_save": 4, "wounds": 4,
-        "melee_dice": ["Green","Green"], "ranged_dice": ["Black","Green","Green"], "range": 24, "ap_cost": 6
+        "melee_dice": ["Green","Green"], "ranged_dice": ["Black","Green","Green"], "range": 24, "ap_cost": 1
     },
 }
 

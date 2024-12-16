@@ -32,39 +32,37 @@ def ai_activate_unit(active_player, opposing_player, battlefield, active_a, turn
         None
     )
 
-    if enemy_in_melee:
-        melee_fight(chosen_unit, enemy_in_melee)
-        # If enemy_in_melee not alive now, proceed with normal activation
-        if not enemy_in_melee.is_alive():
-            # Continue with normal turn
-            pass
-        else:
-            # If enemy still alive, activation ends
-            chosen_unit.has_activated = True
-            return chosen_unit
+    if enemy_in_melee and 'Disengage' in chosen_unit.keywords:
+        # Move away from enemy before doing anything else
+        # Just pick a direction away from enemy and move full movement
+        away_position = (chosen_unit.position[0] + 5, chosen_unit.position[1] + 5)  # Arbitrary
+        chosen_unit.position = util.move_towards(chosen_unit.position, away_position, chosen_unit.movement)
+        enemy_in_melee = None  # now not in melee
 
-    # If not in melee or melee target destroyed, attempt a move
-    # Move towards the closest control point or enemy, chosen randomly
+    elif enemy_in_melee:
+        # If no Disengage, just fight melee
+        melee_fight(chosen_unit, enemy_in_melee, active_player)
+        chosen_unit.has_activated = True
+        return chosen_unit
+
+    # Decide if Regenerate (if 'Regenerate' in chosen_unit.keywords)
+    # For simplicity, 10% chance to regenerate if wounded:
+    if 'Regenerate' in chosen_unit.keywords and random.random() < 0.1:
+        chosen_unit.regenerate()
+        chosen_unit.has_activated = True
+        return chosen_unit
+
+    # Normal move/attack/charge logic unchanged
     move_target = decide_move_target(chosen_unit, opposing_player, battlefield)
     if move_target:
         move_distance = chosen_unit.movement
         chosen_unit.position = util.move_towards(chosen_unit.position, move_target, move_distance)
 
-    # Randomly decide whether to skip shooting and charging for an extra move
-    # For simplicity, 50% chance:
-    if random.random() < 0.3:
-        # Roll 2D6 and move again
-        extra_move = roll_2d6()
-        if move_target:
-            chosen_unit.position = util.move_towards(chosen_unit.position, move_target, extra_move)
-        chosen_unit.has_activated = True
-        return chosen_unit
-
-    # Attempt missile attack if possible
+    # Attempt missile attack
     try_missile_attack(chosen_unit, active_player, opposing_player)
 
-    # Attempt charge if possible
-    try_charge(chosen_unit, opposing_player)
+    # Attempt charge
+    try_charge(chosen_unit, opposing_player, active_player)
 
     chosen_unit.has_activated = True
     return chosen_unit
@@ -104,10 +102,9 @@ def try_missile_attack(chosen_unit, active_player, opposing_player):
     if viable_targets:
         enemy_target = random.choice(viable_targets)
         from fight import simulate_fight
-        simulate_fight(chosen_unit, enemy_target)
+        simulate_fight(chosen_unit, enemy_target, active_player)
 
-def try_charge(chosen_unit, opposing_player):
-    # Attempt to charge the nearest enemy if within 12" and melee favorable
+def try_charge(chosen_unit, opposing_player, active_player):
     from fight import simulate_fight, melee_favorable
     enemies_in_range = [e for e in opposing_player.units if e.is_alive() and util.distance(chosen_unit.position, e.position) <= 12]
     if not enemies_in_range:
@@ -115,12 +112,21 @@ def try_charge(chosen_unit, opposing_player):
     enemy_target = min(enemies_in_range, key=lambda e: util.distance(chosen_unit.position, e.position))
     dist = util.distance(chosen_unit.position, enemy_target.position)
     charge_roll = roll_2d6()
-    if charge_roll >= dist and melee_favorable(chosen_unit, enemy_target):
-        simulate_fight(chosen_unit, enemy_target, 0, 'melee')
 
-def melee_fight(chosen_unit, enemy_target):
+    # Overwatch: If enemy has Overwatch and not activated, enemy fires before charge roll is even executed.
+    # This should happen before the charge distance roll in a full implementation.
+    # For simplicity, assume Overwatch is triggered here if conditions met:
+    if 'Overwatch' in enemy_target.keywords and not enemy_target.has_activated:
+        # Enemy gets a missile attack before movement
+        enemy_target.attack(chosen_unit, 'missile', charging=False)
+
+    if charge_roll >= dist and melee_favorable(chosen_unit, enemy_target):
+        simulate_fight(chosen_unit, enemy_target, active_player, 0, 'melee', charging=True)
+
+
+def melee_fight(chosen_unit, enemy_target, active_player):
     from fight import simulate_fight
-    simulate_fight(chosen_unit, enemy_target, 0, 'melee')
+    simulate_fight(chosen_unit, enemy_target, active_player, 0, 'melee')
 
 def find_unit_by_id_or_name(units, identifier):
     try:

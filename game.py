@@ -1,4 +1,5 @@
-from ai_user_input import ai_activate_unit
+import ai_second_input
+import ai_third_input
 from fight import simulate_fight, melee_favorable
 import ap
 import util
@@ -81,8 +82,11 @@ def play_turn(player_a, player_b, battlefield, turn_number):
     print(f"End of Turn {turn_number} Scores: {player_a.name}={player_a.score}, {player_b.name}={player_b.score}")
 
 def activate_unit_this_turn(active_player, opposing_player, battlefield, ap_available, active_a, turn_number):
-    chosen_unit = ai_activate_unit(active_player, opposing_player, battlefield, active_a, turn_number)
-
+    
+    if active_a:
+        chosen_unit = ai_third_input.ai_activate_unit(active_player, opposing_player, battlefield, active_a, turn_number)
+    else:
+        chosen_unit = ai_third_input.ai_activate_unit(active_player, opposing_player, battlefield, active_a, turn_number)
     # After AI moves and optionally attacks/charges, mark AP spent
     if chosen_unit:
         print(f"{active_player.name}'s unit {chosen_unit.name} spent {chosen_unit.ap_cost} AP this activation.")

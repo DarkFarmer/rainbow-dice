@@ -65,44 +65,44 @@ def create_unit(name, num_models, movement, armor_save, wounds_per_model,
 unit_templates = {
     "Basic Infantry": {
         "num_models": 5, "movement": 6, "armor_save": 6, "wounds": 1,
-        "melee_dice": ["White"], "ranged_dice": ["White"], "range": 12, "ap_cost": 1
+        "melee_dice": ["White"], "ranged_dice": ["White"], "range": 12, "ap_cost": 3.5
     },
     "Elite Infantry": {
         "num_models": 5, "movement": 6, "armor_save": 5, "wounds": 1,
-        "melee_dice": ["Green"], "ranged_dice": ["Green"], "range": 12, "ap_cost": 1
+        "melee_dice": ["Green"], "ranged_dice": ["Green"], "range": 12, "ap_cost": 8.5
     },
     "Heavy Weapons": {
         "num_models": 5, "movement": 6, "armor_save": 6, "wounds": 1,
-        "melee_dice": ["Purple"], "ranged_dice": ["Purple"], "range": 12, "ap_cost": 1
+        "melee_dice": ["Purple"], "ranged_dice": ["Purple"], "range": 12, "ap_cost": 10.5
     },
     "Fast Attack": {
         "num_models": 5, "movement": 12, "armor_save": 6, "wounds": 1,
-        "melee_dice": ["White"], "ranged_dice": ["White"], "range": 12, "ap_cost": 1
+        "melee_dice": ["White"], "ranged_dice": ["White"], "range": 12, "ap_cost": 17.5
     },
     "Mech": {
         "num_models": 1, "movement": 8, "armor_save": 4, "wounds": 4,
         "melee_dice": ["Blue","Blue","Blue","Blue","Blue"],
-        "ranged_dice": ["Blue","Blue","Blue","Blue","Blue"], "range": 12, "ap_cost": 1
+        "ranged_dice": ["Blue","Blue","Blue","Blue","Blue"], "range": 12, "ap_cost": 15
     },
     "Aliens": {
         "num_models": 5, "movement": 8, "armor_save": 5, "wounds": 1,
-        "melee_dice": ["Green"], "ranged_dice": [], "range": 0, "ap_cost": 1
+        "melee_dice": ["Green"], "ranged_dice": [], "range": 0, "ap_cost": 10.5
     },
     "Heavy Infantry": {
         "num_models": 5, "movement": 5, "armor_save": 4, "wounds": 2,
-        "melee_dice": ["Blue"], "ranged_dice": ["Blue"], "range": 12, "ap_cost": 1
+        "melee_dice": ["Blue"], "ranged_dice": ["Blue"], "range": 12, "ap_cost": 10
     },
     "Super-Heavy Infantry": {
         "num_models": 5, "movement": 5, "armor_save": 3, "wounds": 3,
-        "melee_dice": ["Purple"], "ranged_dice": ["Purple"], "range": 12, "ap_cost": 1
+        "melee_dice": ["Purple"], "ranged_dice": ["Purple"], "range": 12, "ap_cost": 14
     },
     "Heavy Aliens": {
         "num_models": 5, "movement": 6, "armor_save": 4, "wounds": 2,
-        "melee_dice": ["Purple"], "ranged_dice": [], "range": 0, "ap_cost": 1
+        "melee_dice": ["Purple"], "ranged_dice": [], "range": 0, "ap_cost": 3
     },
     "Tank": {
         "num_models": 1, "movement": 10, "armor_save": 4, "wounds": 4,
-        "melee_dice": ["Green","Green"], "ranged_dice": ["Black","Green","Green"], "range": 24, "ap_cost": 1
+        "melee_dice": ["Green","Green"], "ranged_dice": ["Black","Green","Green"], "range": 24, "ap_cost": 16.5
     },
 }
 
@@ -119,16 +119,41 @@ def build_unit_from_template(name, template):
         template["ap_cost"]
     )
 
-def run_simulation():
+def run_simulation(total_value):
+    """
+    Simulates battles with equivalently valued forces for both players and
+    evaluates win rates.
+
+    Args:
+        total_value (int): The total value of units for each player.
+    """
     results = []
-    # We'll run indefinitely until you cancel. Just a loop.
     i = 0
+
+    def select_units_for_value(target_value):
+        """
+        Selects a combination of units that matches the target value.
+
+        Args:
+            target_value (int): The total value to match.
+
+        Returns:
+            list: A list of unit names whose combined value matches the target.
+        """
+        unit_names = list(unit_templates.keys())
+        while True:
+            choices = [random.choice(unit_names) for _ in range(5)]
+            total_cost = sum(unit_templates[name]["ap_cost"] for name in choices)
+            print(f"makin a list cost:  {total_cost}")
+            if abs(total_cost - target_value) < 10:  # Allowing a small tolerance
+                return choices
+
     while True:
         i += 1
-        # Randomly pick 5 units for each player from the templates
-        unit_names = list(unit_templates.keys())
-        player1_choices = random.sample(unit_names, 5)
-        player2_choices = random.sample(unit_names, 5)
+
+        # Choose units for each player with equivalent total value
+        player1_choices = select_units_for_value(total_value)
+        player2_choices = select_units_for_value(total_value)
 
         player1_units = [build_unit_from_template(name, unit_templates[name]) for name in player1_choices]
         player2_units = [build_unit_from_template(name, unit_templates[name]) for name in player2_choices]
@@ -145,27 +170,25 @@ def run_simulation():
         # Determine result
         if player1.score > player2.score:
             winner = "Player1"
-            loser = "Player2"
+            results.append(winner)
         elif player2.score > player1.score:
             winner = "Player2"
-            loser = "Player1"
+            results.append(winner)
         else:
-            winner = None
-            loser = None
+            results.append("Draw")
 
-        # Adjust AP based on result
-        if winner is not None:
-            # Increase winner units AP by 1
-            for name in (player1_choices if winner == "Player1" else player2_choices):
-                unit_templates[name]["ap_cost"] += 0.01
-            # Decrease loser units AP by 1, but not below 1 (if you want a floor)
-            for name in (player2_choices if winner == "Player1" else player1_choices):
-                unit_templates[name]["ap_cost"] = max(1, unit_templates[name]["ap_cost"] - 0.01)
+        # Print results summary every 10 runs
+        
+        player1_wins = results.count("Player1")
+        player2_wins = results.count("Player2")
+        draws = results.count("Draw")
+        total_games = len(results)
 
-        # Print latest AP totals
-        print(f"--- After Run {i} ---")
-        for name in unit_templates:
-            print(f"{name}: AP={unit_templates[name]['ap_cost']}")
+        print(f"--- After {i} Runs ---")
+        print(f"Player1 Wins: {player1_wins} ({player1_wins / total_games:.2%})")
+        print(f"Player2 Wins: {player2_wins} ({player2_wins / total_games:.2%})")
+        print(f"Draws: {draws} ({draws / total_games:.2%})")
+
 
 if __name__ == "__main__":
-    run_simulation()
+    run_simulation(75)

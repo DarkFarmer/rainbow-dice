@@ -5,8 +5,8 @@ import game
 from player import Player
 import battlefield
 import setup
+from dice import DICE_TYPES
 
-# Mapping dice colors to your dice notation. Adjust as needed.
 DICE_MAPPING = {
     'White': 'White',
     'Green': 'Green',
@@ -14,54 +14,94 @@ DICE_MAPPING = {
     'Purple': 'Purple',
     'Pink': 'Pink',
     'Black': 'Black',
+    'Gunmetal': 'Gunmetal',
+    'Silver': 'Silver',
+    'Gold': 'Gold',
+    'Red': 'Red',
+    'Crimson': 'Crimson',
 }
 
-# Define a function to create a unit
-def create_unit(name, num_models, movement, armor_save, wounds_per_model,
-                melee_dice_per_model, ranged_dice_per_model, range_distance, ap_cost):
-    armor = {
-        6: 'Unarmored',
-        5: 'Light Armor',
-        4: 'Medium Armor',
-        3: 'Heavy Armor'
-    }.get(armor_save, 'Light Armor')
+KEYWORDS_LIST = [
+    "Shields",
+    "Last Stand",
+    "Degrade",
+    "Commander",
+    "Camouflage",
+    "Sharpshooter",
+    "Attack Augmentation",
+    "Crushing Charge",
+    "Withering Fire",
+    "Relentless",
+    "Slayer",
+    "Lucky",
+    "Assassin"
+]
 
-    melee_attack_dice = []
-    for _ in range(num_models):
-        melee_attack_dice.extend([DICE_MAPPING[d] for d in melee_dice_per_model])
+STAT_MODS = [
+    "num_models",
+    "wounds_per_model",
+    "armor",
+    "movement",
+    "missile_attack_dice",
+    "melee_attack_dice",
+    "attack_range"
+]
 
-    missile_attack_dice = []
-    if ranged_dice_per_model:
-        for _ in range(num_models):
-            missile_attack_dice.extend([DICE_MAPPING[d] for d in ranged_dice_per_model])
+ARMOR_TIERS = ['Unarmored', 'Light Armor', 'Medium Armor', 'Heavy Armor']
 
-    return Unit(
-        name=name,
-        num_models=num_models,
-        wounds_per_model=wounds_per_model,
-        armor=armor,
-        movement=movement,
-        ap_cost=ap_cost,
-        missile_attack_dice=missile_attack_dice,
-        melee_attack_dice=melee_attack_dice,
-        attack_range=range_distance,
-        special_rules=None,
-        keywords=[]
-    )
+# Cost dictionaries split by category
+# Categories: "<=2", "<=4", ">4"
+keyword_costs = {
+    "<=2": {kw: 0.1 for kw in KEYWORDS_LIST},
+    "<=4": {kw: 0.1 for kw in KEYWORDS_LIST},
+    ">4": {kw: 0.1 for kw in KEYWORDS_LIST}
+}
 
-#--- After Run 2294960 ---
-#Basic Infantry: AP=3.639999999999966
-#Elite Infantry: AP=8.489999999999863
-#Heavy Weapons: AP=10.609999999999818
-#Fast Attack: AP=17.439999999999927
-#Mech: AP=15.18999999999972
-#Aliens: AP=10.689999999999817
-#Heavy Infantry: AP=9.799999999999836
-#Super-Heavy Infantry: AP=14.369999999999738
-#Heavy Aliens: AP=3.389999999999972
-#Tank: AP=16.579999999999792
+stat_costs = {
+    "<=2": {},
+    "<=4": {},
+    ">4": {}
+}
 
-# Define all unit types from your spreadsheet (initially all AP=1)
+# Initialize stat costs for each category
+base_stat_keys = [
+    "num_models_10",
+    "wounds_per_model+1",
+    "armor_improved",
+    "movement+2",
+    "attack_range+4"
+]
+
+for cat in stat_costs:
+    for stk in base_stat_keys:
+        stat_costs[cat][stk] = 0.1
+    # For dice additions
+    for dtype in DICE_TYPES.keys():
+        stat_costs[cat][f"missile_die_{dtype}"] = 0.1
+        stat_costs[cat][f"melee_die_{dtype}"] = 0.1
+
+def num_keywords_to_add():
+    x = random.random()
+    if x < 0.7:
+        return 0
+    elif x < 0.9:
+        return 1
+    else:
+        return 2
+
+def num_stats_to_add():
+    x = random.random()
+    if x < 0.5:
+        return 0
+    elif x < 0.8:
+        return 1
+    elif x < 0.95:
+        return 2
+    elif x < 0.99:
+        return 3
+    else:
+        return 4
+
 unit_templates = {
     "Basic Infantry": {
         "num_models": 5, "movement": 6, "armor_save": 6, "wounds": 1,
@@ -69,32 +109,32 @@ unit_templates = {
     },
     "Elite Infantry": {
         "num_models": 5, "movement": 6, "armor_save": 5, "wounds": 1,
-        "melee_dice": ["Green"], "ranged_dice": ["Green"], "range": 12, "ap_cost": 1
+        "melee_dice": ["Green"], "ranged_dice": ["Green"], "range": 12, "ap_cost": 2.5
     },
     "Heavy Weapons": {
         "num_models": 5, "movement": 6, "armor_save": 6, "wounds": 1,
-        "melee_dice": ["Purple"], "ranged_dice": ["Purple"], "range": 12, "ap_cost": 1
+        "melee_dice": ["Purple"], "ranged_dice": ["Purple"], "range": 12, "ap_cost": 3
     },
     "Fast Attack": {
         "num_models": 5, "movement": 12, "armor_save": 6, "wounds": 1,
-        "melee_dice": ["White"], "ranged_dice": ["White"], "range": 12, "ap_cost": 1
+        "melee_dice": ["White"], "ranged_dice": ["White"], "range": 12, "ap_cost": 5
     },
     "Mech": {
         "num_models": 1, "movement": 8, "armor_save": 4, "wounds": 4,
         "melee_dice": ["Blue","Blue","Blue","Blue","Blue"],
-        "ranged_dice": ["Blue","Blue","Blue","Blue","Blue"], "range": 12, "ap_cost": 1
+        "ranged_dice": ["Blue","Blue","Blue","Blue","Blue"], "range": 12, "ap_cost": 4
     },
     "Aliens": {
         "num_models": 5, "movement": 8, "armor_save": 5, "wounds": 1,
-        "melee_dice": ["Green"], "ranged_dice": [], "range": 0, "ap_cost": 1
+        "melee_dice": ["Green"], "ranged_dice": [], "range": 0, "ap_cost": 3
     },
     "Heavy Infantry": {
         "num_models": 5, "movement": 5, "armor_save": 4, "wounds": 2,
-        "melee_dice": ["Blue"], "ranged_dice": ["Blue"], "range": 12, "ap_cost": 1
+        "melee_dice": ["Blue"], "ranged_dice": ["Blue"], "range": 12, "ap_cost": 3
     },
     "Super-Heavy Infantry": {
         "num_models": 5, "movement": 5, "armor_save": 3, "wounds": 3,
-        "melee_dice": ["Purple"], "ranged_dice": ["Purple"], "range": 12, "ap_cost": 1
+        "melee_dice": ["Purple"], "ranged_dice": ["Purple"], "range": 12, "ap_cost": 4
     },
     "Heavy Aliens": {
         "num_models": 5, "movement": 6, "armor_save": 4, "wounds": 2,
@@ -102,36 +142,165 @@ unit_templates = {
     },
     "Tank": {
         "num_models": 1, "movement": 10, "armor_save": 4, "wounds": 4,
-        "melee_dice": ["Green","Green"], "ranged_dice": ["Black","Green","Green"], "range": 24, "ap_cost": 1
+        "melee_dice": ["Green","Green"], "ranged_dice": ["Black","Green","Green"], "range": 24, "ap_cost": 5
     },
 }
 
-def build_unit_from_template(name, template):
-    return create_unit(
-        name,
-        template["num_models"],
-        template["movement"],
-        template["armor_save"],
-        template["wounds"],
-        template["melee_dice"],
-        template["ranged_dice"],
-        template["range"],
-        template["ap_cost"]
+def create_unit(name, data):
+    armor = {
+        6: 'Unarmored',
+        5: 'Light Armor',
+        4: 'Medium Armor',
+        3: 'Heavy Armor'
+    }.get(data["armor_save"], 'Light Armor')
+
+    melee_attack_dice = []
+    for _ in range(data["num_models"]):
+        melee_attack_dice.extend([DICE_MAPPING[d] for d in data["melee_dice"]])
+
+    missile_attack_dice = []
+    if data["ranged_dice"]:
+        for _ in range(data["num_models"]):
+            missile_attack_dice.extend([DICE_MAPPING[d] for d in data["ranged_dice"]])
+
+    u = Unit(
+        name=name,
+        num_models=data["num_models"],
+        wounds_per_model=data["wounds"],
+        armor=armor,
+        movement=data["movement"],
+        ap_cost=data["ap_cost"],
+        missile_attack_dice=missile_attack_dice,
+        melee_attack_dice=melee_attack_dice,
+        attack_range=data["range"],
+        special_rules=None,
+        keywords=[]
     )
+    return u
+
+def get_category(ap_cost):
+    if ap_cost <= 2:
+        return "<=2"
+    elif ap_cost <=4:
+        return "<=4"
+    else:
+        return ">4"
+
+def apply_random_modifications(unit):
+    # Determine category from base AP (before modifications)
+    base_category = get_category(unit.ap_cost)
+
+    k_count = num_keywords_to_add()
+    s_count = num_stats_to_add()
+
+    chosen_keywords = []
+    chosen_stats = []
+
+    # Add keywords
+    if k_count > 0:
+        picked_keywords = random.sample(KEYWORDS_LIST, k_count)
+        for kw in picked_keywords:
+            unit.keywords.append(kw)
+            chosen_keywords.append(kw)
+
+    # Add stat modifications
+    if s_count > 0:
+        chosen_mods = random.sample(STAT_MODS, s_count)
+        for smod in chosen_mods:
+            stat_key = apply_stat_mod(unit, smod)
+            if stat_key:
+                chosen_stats.append(stat_key)
+
+    # Calculate cost from this category
+    add_cost = 0.0
+    for kw in chosen_keywords:
+        add_cost += keyword_costs[base_category][kw]
+
+    for st in chosen_stats:
+        add_cost += stat_costs[base_category][st]
+
+    unit.ap_cost += add_cost
+
+    return base_category, chosen_keywords, chosen_stats
+
+def apply_stat_mod(unit, smod):
+    if smod == "num_models":
+        if unit.num_models < 10:
+            unit.num_models = 10
+            return "num_models_10"
+
+    elif smod == "wounds_per_model":
+        unit.wounds_per_model += 1
+        return "wounds_per_model+1"
+
+    elif smod == "armor":
+        if unit.armor in ARMOR_TIERS:
+            idx = ARMOR_TIERS.index(unit.armor)
+            if idx < len(ARMOR_TIERS)-1:
+                unit.armor = ARMOR_TIERS[idx+1]
+                return "armor_improved"
+
+    elif smod == "movement":
+        unit.movement += 2
+        return "movement+2"
+
+    elif smod == "base_missile_attack_dice":
+        die_type = random.choice(list(DICE_TYPES.keys()))
+        unit.missile_attack_dice.append(die_type)
+        return f"missile_die_{die_type}"
+
+    elif smod == "base_melee_attack_dice":
+        die_type = random.choice(list(DICE_TYPES.keys()))
+        unit.melee_attack_dice.append(die_type)
+        return f"melee_die_{die_type}"
+
+    elif smod == "attack_range":
+        unit.attack_range += 4
+        return "attack_range+4"
+
+    return None
+
+def adjust_costs_for_results(player_mods, winner):
+    # player_mods: list of tuples (cat, [keywords], [stats])
+    # winner: True/False
+    delta = 0.01 if winner else -0.01
+
+    for (cat, kw_list, st_list) in player_mods:
+        for kw in kw_list:
+            new_val = keyword_costs[cat][kw] + delta
+            keyword_costs[cat][kw] = max(0.0, new_val)
+        for st in st_list:
+            new_val = stat_costs[cat][st] + delta
+            stat_costs[cat][st] = max(0.0, new_val)
 
 def run_simulation():
-    results = []
-    # We'll run indefinitely until you cancel. Just a loop.
     i = 0
     while True:
         i += 1
-        # Randomly pick 5 units for each player from the templates
         unit_names = list(unit_templates.keys())
         player1_choices = random.sample(unit_names, 5)
         player2_choices = random.sample(unit_names, 5)
 
-        player1_units = [build_unit_from_template(name, unit_templates[name]) for name in player1_choices]
-        player2_units = [build_unit_from_template(name, unit_templates[name]) for name in player2_choices]
+        player1_units = []
+        player2_units = []
+        player1_mods = []
+        player2_mods = []
+
+        # Build and modify Player1 units
+        for name in player1_choices:
+            data = unit_templates[name]
+            u = create_unit(name, data)
+            cat, kws, sts = apply_random_modifications(u)
+            player1_mods.append((cat, kws, sts))
+            player1_units.append(u)
+
+        # Build and modify Player2 units
+        for name in player2_choices:
+            data = unit_templates[name]
+            u = create_unit(name, data)
+            cat, kws, sts = apply_random_modifications(u)
+            player2_mods.append((cat, kws, sts))
+            player2_units.append(u)
 
         player1 = Player(name="Player1", units=player1_units)
         player2 = Player(name="Player2", units=player2_units)
@@ -142,30 +311,26 @@ def run_simulation():
 
         game.play_game(player1, player2, bf)
 
-        # Determine result
         if player1.score > player2.score:
-            winner = "Player1"
-            loser = "Player2"
+            adjust_costs_for_results(player1_mods, True)
+            adjust_costs_for_results(player2_mods, False)
         elif player2.score > player1.score:
-            winner = "Player2"
-            loser = "Player1"
+            adjust_costs_for_results(player1_mods, False)
+            adjust_costs_for_results(player2_mods, True)
         else:
-            winner = None
-            loser = None
+            # Draw: no cost adjustments
+            pass
 
-        # Adjust AP based on result
-        if winner is not None:
-            # Increase winner units AP by 1
-            for name in (player1_choices if winner == "Player1" else player2_choices):
-                unit_templates[name]["ap_cost"] += 0.01
-            # Decrease loser units AP by 1, but not below 1 (if you want a floor)
-            for name in (player2_choices if winner == "Player1" else player1_choices):
-                unit_templates[name]["ap_cost"] = max(1, unit_templates[name]["ap_cost"] - 0.01)
-
-        # Print latest AP totals
-        print(f"--- After Run {i} ---")
-        for name in unit_templates:
-            print(f"{name}: AP={unit_templates[name]['ap_cost']}")
+        if i % 100 == 0:
+            print(f"--- After Run {i} ---")
+            for cat in ["<=2", "<=4", ">4"]:
+                print(f"Category {cat}:")
+                print(" Keyword Costs:")
+                for kw, c in keyword_costs[cat].items():
+                    print(f"  {kw}: {c:.2f}")
+                print(" Stat Costs:")
+                for st, c in stat_costs[cat].items():
+                    print(f"  {st}: {c:.2f}")
 
 if __name__ == "__main__":
     run_simulation()

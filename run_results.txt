@@ -1,0 +1,130 @@
+--- After Run 19963700 ---
+Category <=2:
+ Keyword Costs:
+  Shields: 0.42
+  Last Stand: 0.21
+  Degrade: 0.04
+  Commander: 0.00
+  Camouflage: 0.10
+  Sharpshooter: 0.06
+  Attack Augmentation: 0.09
+  Crushing Charge: 0.16
+  Withering Fire: 0.05
+  Relentless: 0.19
+  Slayer: 0.11
+  Lucky: 0.00
+  Assassin: 0.12
+ Stat Costs:
+  num_models_10: 0.09
+  wounds_per_model+1: 0.57
+  armor_improved: 0.19
+  movement+2: 3.59
+  attack_range+4: 0.11
+  missile_die_White: 0.10
+  melee_die_White: 0.10
+  missile_die_Green: 0.10
+  melee_die_Green: 0.10
+  missile_die_Blue: 0.10
+  melee_die_Blue: 0.10
+  missile_die_Purple: 0.10
+  melee_die_Purple: 0.10
+  missile_die_Black: 0.10
+  melee_die_Black: 0.10
+  missile_die_Gunmetal: 0.10
+  melee_die_Gunmetal: 0.10
+  missile_die_Silver: 0.10
+  melee_die_Silver: 0.10
+  missile_die_Gold: 0.10
+  melee_die_Gold: 0.10
+  missile_die_Pink: 0.10
+  melee_die_Pink: 0.10
+  missile_die_Red: 0.10
+  melee_die_Red: 0.10
+  missile_die_Crimson: 0.10
+  melee_die_Crimson: 0.10
+Category <=4:
+ Keyword Costs:
+  Shields: 0.02
+  Last Stand: 0.31
+  Degrade: 0.08
+  Commander: 0.94
+  Camouflage: 0.27
+  Sharpshooter: 0.31
+  Attack Augmentation: 0.11
+  Crushing Charge: 0.02
+  Withering Fire: 0.70
+  Relentless: 0.00
+  Slayer: 0.10
+  Lucky: 0.26
+  Assassin: 0.09
+ Stat Costs:
+  num_models_10: 0.39
+  wounds_per_model+1: 0.28
+  armor_improved: 0.06
+  movement+2: 2.13
+  attack_range+4: 0.57
+  missile_die_White: 0.10
+  melee_die_White: 0.10
+  missile_die_Green: 0.10
+  melee_die_Green: 0.10
+  missile_die_Blue: 0.10
+  melee_die_Blue: 0.10
+  missile_die_Purple: 0.10
+  melee_die_Purple: 0.10
+  missile_die_Black: 0.10
+  melee_die_Black: 0.10
+  missile_die_Gunmetal: 0.10
+  melee_die_Gunmetal: 0.10
+  missile_die_Silver: 0.10
+  melee_die_Silver: 0.10
+  missile_die_Gold: 0.10
+  melee_die_Gold: 0.10
+  missile_die_Pink: 0.10
+  melee_die_Pink: 0.10
+  missile_die_Red: 0.10
+  melee_die_Red: 0.10
+  missile_die_Crimson: 0.10
+  melee_die_Crimson: 0.10
+Category >4:
+ Keyword Costs:
+  Shields: 0.21
+  Last Stand: 0.14
+  Degrade: 0.03
+  Commander: 0.13
+  Camouflage: 0.07
+  Sharpshooter: 0.01
+  Attack Augmentation: 0.02
+  Crushing Charge: 0.07
+  Withering Fire: 0.16
+  Relentless: 0.13
+  Slayer: 0.16
+  Lucky: 0.14
+  Assassin: 0.37
+ Stat Costs:
+  num_models_10: 0.12
+  wounds_per_model+1: 0.40
+  armor_improved: 0.53
+  movement+2: 0.44
+  attack_range+4: 0.19
+  missile_die_White: 0.10
+  melee_die_White: 0.10
+  missile_die_Green: 0.10
+  melee_die_Green: 0.10
+  missile_die_Blue: 0.10
+  melee_die_Blue: 0.10
+  missile_die_Purple: 0.10
+  melee_die_Purple: 0.10
+  missile_die_Black: 0.10
+  melee_die_Black: 0.10
+  missile_die_Gunmetal: 0.10
+  melee_die_Gunmetal: 0.10
+  missile_die_Silver: 0.10
+  melee_die_Silver: 0.10
+  missile_die_Gold: 0.10
+  melee_die_Gold: 0.10
+  missile_die_Pink: 0.10
+  melee_die_Pink: 0.10
+  missile_die_Red: 0.10
+  melee_die_Red: 0.10
+  missile_die_Crimson: 0.10
+  melee_die_Crimson: 0.10

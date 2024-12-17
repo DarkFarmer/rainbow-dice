@@ -129,7 +129,7 @@ def try_charge(chosen_unit, active_player, opposing_player):
     enemies_in_range = [e for e in opposing_player.units if e.is_alive() and util.distance(chosen_unit.position, e.position) <= 12]
 
     if not enemies_in_range:
-        print("no enemies in range")
+        #print("no enemies in range")
         return
 
     # If we have allies in melee, try to charge the enemy that traps them

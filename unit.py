@@ -151,15 +151,15 @@ class Unit:
         if 'Relentless' in self.keywords and phase == 'melee':
             armor_save_modifier += 1
 
-        print(f"{self.name} ({self.num_models} models) is attacking {target_unit.name} in the {phase} phase.")
-        if charging:
-            print(f"{self.name} is charging into combat!")
+        #print(f"{self.name} ({self.num_models} models) is attacking {target_unit.name} in the {phase} phase.")
+        #if charging:
+            #print(f"{self.name} is charging into combat!")
 
         dice_pool = self.get_attack_dice(phase, charging=charging)
-        print(f"{self.name} is rolling {len(dice_pool)} dice: {dice_pool}")
+        #print(f"{self.name} is rolling {len(dice_pool)} dice: {dice_pool}")
 
         total_wounds = self.roll_attack_dice(dice_pool, slayer='Slayer' in self.keywords)
-        print(f"{self.name} inflicted the following wounds: {total_wounds}")
+        #print(f"{self.name} inflicted the following wounds: {total_wounds}")
 
         target_unit.defend(total_wounds, armor_save_modifier, attacker=self, phase=phase)
 
@@ -172,15 +172,15 @@ class Unit:
         can_save_mortal = 'Lucky' in self.keywords
         total_incoming = sum(incoming_wounds.values())
 
-        print(f"{self.name} is defending against {total_incoming} incoming wounds: {incoming_wounds}")
-        print(f"{self.name}'s armor save is {armor_save} (modifier: {armor_save_modifier}).")
+        #print(f"{self.name} is defending against {total_incoming} incoming wounds: {incoming_wounds}")
+        #print(f"{self.name}'s armor save is {armor_save} (modifier: {armor_save_modifier}).")
 
         # Shields
         wounds_to_ignore = min(self.shields_remaining, total_incoming)
         self.shields_remaining -= wounds_to_ignore
         wounds_to_assign = total_incoming - wounds_to_ignore
-        if wounds_to_ignore > 0:
-            print(f"{self.name} absorbed {wounds_to_ignore} wounds with shields.")
+        #if wounds_to_ignore > 0:
+            #print(f"{self.name} absorbed {wounds_to_ignore} wounds with shields.")
 
         wound_queue = (
             ['mortal'] * incoming_wounds['mortal'] +
@@ -215,11 +215,11 @@ class Unit:
                 if not model.is_alive():
                     casualties += 1
                     model_indices.pop(0)  # model dead
-                    print(f"{self.name} lost a model to {wound_type} damage.")
-            else:
-                print(f"{self.name} saved against {wound_type} damage with a roll of {save_roll}.")
+                    #print(f"{self.name} lost a model to {wound_type} damage.")
+            #else:
+                #print(f"{self.name} saved against {wound_type} damage with a roll of {save_roll}.")
 
-        print(f"{self.name} took {casualties} casualties this phase.")
+        #print(f"{self.name} took {casualties} casualties this phase.")
 
         # Handle Last Stand: if unit has not activated and has Last Stand,
         # do not remove casualties now, just store them.
@@ -235,9 +235,9 @@ class Unit:
         self.num_models = alive_models
         if alive_models == 0:
             self.alive = False
-            print(f"{self.name} has been wiped out.")
-        else:
-            print(f"{self.name} has {self.num_models} models remaining.")
+            #print(f"{self.name} has been wiped out.")
+        #else:
+            #print(f"{self.name} has {self.num_models} models remaining.")
 
     def apply_pending_casualties(self):
         # Pending casualties represent models already killed but not removed due to Last Stand.
@@ -271,7 +271,7 @@ class Unit:
         if destroyed_count > 0:
             amount = random.randint(1, 6)
             amount = min(amount, destroyed_count)
-            print(f"{self.name} is regenerating {amount} models.")
+            #print(f"{self.name} is regenerating {amount} models.")
             # Restore that many models at full wounds
             for _ in range(amount):
                 self.models.append(Model(self.wounds_per_model))

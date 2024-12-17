@@ -54,7 +54,7 @@ def simulate_fight(unit_a, unit_b, active_player, initial_distance=24, phase='mi
 
     # Perform a melee attack if in melee phase
     if phase == 'melee':
-        print(f"{active_unit.name} is doing melee")
+        #print(f"{active_unit.name} is doing melee")
         initial_models = unit_b.num_models
         unit_a.attack(unit_b, 'melee', charging=charging)
         total_wounds_by_phase[active_unit.name]['melee'] += defending_unit.calculate_total_wounds()

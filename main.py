@@ -69,7 +69,7 @@ base_stat_keys = [
     "wounds_per_model+1",
     "armor_improved",
     "movement+2",
-    "attack_range+4"
+    "attack_range+4",
 ]
 
 for cat in stat_costs:
@@ -227,6 +227,13 @@ def apply_stat_mod(unit, smod):
     if smod == "num_models":
         if unit.num_models < 10:
             unit.num_models = 10
+            # Add 5 additional basic attack dice for both melee and missile
+            if unit.base_melee_attack_dice:
+                basic_melee_die = unit.base_melee_attack_dice[0]  # First die type in melee pool
+                unit.base_melee_attack_dice.extend([basic_melee_die] * 5)
+            if unit.base_missile_attack_dice:
+                basic_missile_die = unit.base_missile_attack_dice[0]  # First die type in missile pool
+                unit.base_missile_attack_dice.extend([basic_missile_die] * 5)
             return "num_models_10"
 
     elif smod == "wounds_per_model":
@@ -244,14 +251,14 @@ def apply_stat_mod(unit, smod):
         unit.movement += 2
         return "movement+2"
 
-    elif smod == "base_missile_attack_dice":
+    elif smod == "missile_attack_dice":
         die_type = random.choice(list(DICE_TYPES.keys()))
-        unit.missile_attack_dice.append(die_type)
+        unit.base_missile_attack_dice.append(die_type)
         return f"missile_die_{die_type}"
 
-    elif smod == "base_melee_attack_dice":
+    elif smod == "melee_attack_dice":
         die_type = random.choice(list(DICE_TYPES.keys()))
-        unit.melee_attack_dice.append(die_type)
+        unit.base_melee_attack_dice.append(die_type)
         return f"melee_die_{die_type}"
 
     elif smod == "attack_range":
@@ -268,10 +275,10 @@ def adjust_costs_for_results(player_mods, winner):
     for (cat, kw_list, st_list) in player_mods:
         for kw in kw_list:
             new_val = keyword_costs[cat][kw] + delta
-            keyword_costs[cat][kw] = max(0.0, new_val)
+            keyword_costs[cat][kw] = new_val
         for st in st_list:
             new_val = stat_costs[cat][st] + delta
-            stat_costs[cat][st] = max(0.0, new_val)
+            stat_costs[cat][st] = new_val
 
 def run_simulation():
     i = 0

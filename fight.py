@@ -8,14 +8,16 @@ def melee_favorable(attacker, defender):
     """
     return True
 
-def simulate_fight(unit_a, unit_b, active_player, initial_distance=24, phase='missile', charging=False):
+def simulate_fight(unit_a, unit_b, active_player, battlefield, initial_distance=24, phase='missile', charging=False):
     """
     Simulates a fight between two units, tracking kills and updating active player's stats.
     :param unit_a: The attacking unit.
     :param unit_b: The defending unit.
+    :param battlefield: The battlefield object containing terrain info.
     :param initial_distance: Starting distance between the units.
     :param active_player: The player controlling the attacking unit.
     :param phase: The phase of the fight ('missile' or 'melee').
+    :param charging: Boolean indicating if unit_a is charging (for melee).
     """
     # Initial conditions
     distance = initial_distance
@@ -33,7 +35,7 @@ def simulate_fight(unit_a, unit_b, active_player, initial_distance=24, phase='mi
     # Perform a single ranged attack if possible
     if phase == 'missile':
         initial_models = unit_b.num_models
-        unit_a.attack(unit_b, 'missile', charging=False)
+        unit_a.attack(unit_b, 'missile', charging=False, battlefield=battlefield)
         total_wounds_by_phase[active_unit.name]['missile'] += defending_unit.calculate_total_wounds()
 
         # Count kills from missile attack
@@ -54,9 +56,8 @@ def simulate_fight(unit_a, unit_b, active_player, initial_distance=24, phase='mi
 
     # Perform a melee attack if in melee phase
     if phase == 'melee':
-        #print(f"{active_unit.name} is doing melee")
         initial_models = unit_b.num_models
-        unit_a.attack(unit_b, 'melee', charging=charging)
+        unit_a.attack(unit_b, 'melee', charging=charging, battlefield=battlefield)
         total_wounds_by_phase[active_unit.name]['melee'] += defending_unit.calculate_total_wounds()
 
         # Count kills from melee attack

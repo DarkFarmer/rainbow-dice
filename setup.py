@@ -15,13 +15,11 @@ def setup_battlefield():
     num_control_points = random.randint(2, 4)
 
     control_points = []
-    # Control points go into squares between x=0..5 and y=1..2
-    # That gives a 6x2 area in the middle rows of the board
+    # Place control points in squares y=2 (middle rows)
     for _ in range(num_control_points):
-        x_square = random.randint(0, 5)  # horizontal squares from 0 to 5
-        y_square = 2 # random.randint(1, 2)  # vertical squares 1 to 2
+        x_square = random.randint(0, 5)
+        y_square = 2
 
-        # Random coordinates within the chosen square
         x_pos = x_square * square_size
         y_pos = y_square * square_size
 
@@ -31,26 +29,51 @@ def setup_battlefield():
     return control_points, battlefield_width, battlefield_height
 
 def place_units_randomly(player_a, player_b):
-    """
-    Place units for two players randomly within specific 10"x10" cells.
-    Player A's units are placed in the top row (y=0),
-    and Player B's units are placed in the bottom row (y=3).
-    Coordinates are rounded to ensure exact positions.
-    """
     square_size = 10
-
-    # Helper function to calculate and round position
     def calculate_position(x_square, y_square):
         x_pos = x_square * square_size + random.uniform(0, square_size)
         y_pos = y_square * square_size + random.uniform(0, square_size)
         return (round(x_pos), round(y_pos))
 
-    # Place Player A units along y=0 row
+    # Player A top row (y=0)
     for unit in player_a.units:
         x_square = random.randint(0, 5)
         unit.position = calculate_position(x_square, 0)
 
-    # Place Player B units along y=3 row
+    # Player B bottom row (y=3)
     for unit in player_b.units:
         x_square = random.randint(0, 5)
         unit.position = calculate_position(x_square, 3)
+
+
+def place_terrain(battlefield):
+    # We roll 2D3: two random integers 1-3 each, summed.
+    terrain_count = random.randint(1,3) + random.randint(1,3)  # 2 to 6 pieces
+
+    # Terrain area between squares x=1..2 and y=1..2
+    # That gives us a 2x2 area = 4 possible squares: (1,1), (1,2), (2,1), (2,2)
+    possible_squares = [(1,1),(1,2),(2,1),(2,2)]
+    random.shuffle(possible_squares)
+
+    terrain_types = ["Forest", "Building", "Hard Cover"]
+
+    terrain_map = []
+    square_size = 10
+
+    for _ in range(terrain_count):
+        if not possible_squares:
+            break
+        x_sq, y_sq = possible_squares.pop()
+        ttype = random.choice(terrain_types)
+        x_pos = x_sq * square_size
+        y_pos = y_sq * square_size
+        # Each terrain is 10x10, same as a square
+        terrain_map.append({
+            "type": ttype,
+            "x": x_pos,
+            "y": y_pos,
+            "width": 10,
+            "height": 10
+        })
+
+    battlefield.terrain_map = terrain_map

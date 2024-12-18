@@ -26,7 +26,7 @@ def ai_activate_unit(active_player, opposing_player, battlefield, active_a, turn
         chosen_unit.melee_target = None
     elif chosen_unit.melee_target is not None:
         # Fight melee
-        melee_fight(chosen_unit, chosen_unit.melee_target, active_player)
+        melee_fight(chosen_unit, chosen_unit.melee_target, active_player, battlefield)
         chosen_unit.has_activated = True
         return chosen_unit
 
@@ -43,10 +43,10 @@ def ai_activate_unit(active_player, opposing_player, battlefield, active_a, turn
         chosen_unit.position = util.move_towards(chosen_unit.position, move_target, move_distance)
 
     # Attempt missile attack
-    try_missile_attack(chosen_unit, active_player, opposing_player)
+    try_missile_attack(chosen_unit, active_player, opposing_player, battlefield)
 
     # Attempt charge
-    try_charge(chosen_unit, active_player, opposing_player)
+    try_charge(chosen_unit, active_player, opposing_player, battlefield)
 
     chosen_unit.has_activated = True
     return chosen_unit
@@ -113,7 +113,7 @@ def decide_move_target(chosen_unit, active_player, opposing_player, battlefield)
     return None
 
 
-def try_missile_attack(chosen_unit, active_player, opposing_player):
+def try_missile_attack(chosen_unit, active_player, opposing_player, battlefield):
     alive_enemies = [e for e in opposing_player.units if e.is_alive()]
     viable_targets = [
         e for e in alive_enemies 
@@ -136,10 +136,10 @@ def try_missile_attack(chosen_unit, active_player, opposing_player):
             enemy_target = random.choice(viable_targets)
 
         from fight import simulate_fight
-        simulate_fight(chosen_unit, enemy_target, active_player)
+        simulate_fight(chosen_unit, enemy_target, active_player, battlefield)
 
 
-def try_charge(chosen_unit, active_player, opposing_player):
+def try_charge(chosen_unit, active_player, opposing_player, battlefield):
     from fight import simulate_fight, melee_favorable
 
     ally_in_melee = [
@@ -172,14 +172,14 @@ def try_charge(chosen_unit, active_player, opposing_player):
         enemy_target.attack(chosen_unit, 'missile', charging=False)
 
     if charge_roll >= dist and melee_favorable(chosen_unit, enemy_target):
-        simulate_fight(chosen_unit, enemy_target, active_player, 0, 'melee', charging=True)
+        simulate_fight(chosen_unit, enemy_target, active_player, battlefield, 0, 'melee', charging=True)
         chosen_unit.melee_target = enemy_target
         enemy_target.melee_target = chosen_unit
 
 
-def melee_fight(chosen_unit, enemy_target, active_player):
+def melee_fight(chosen_unit, enemy_target, active_player, battlefield):
     from fight import simulate_fight
-    simulate_fight(chosen_unit, enemy_target, active_player, 0, 'melee')
+    simulate_fight(chosen_unit, enemy_target, active_player, battlefield, 0, 'melee')
 
 
 def find_unit_by_id_or_name(units, identifier):

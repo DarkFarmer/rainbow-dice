@@ -307,6 +307,7 @@ def run_simulation():
 
         control_points, width, height = setup.setup_battlefield()
         bf = battlefield.Battlefield(width, height, control_points, [])
+        setup.place_terrain(bf)
         setup.place_units_randomly(player1, player2)
 
         game.play_game(player1, player2, bf)

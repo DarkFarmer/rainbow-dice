@@ -64,17 +64,6 @@ class Unit:
         # If Last Stand is active, and not yet activated this turn, treat pending casualties as not removed yet.
         return any(m.is_alive() for m in self.models) or (self.last_stand_active and self.pending_casualties > 0 and not self.has_activated)
 
-    def get_armor_save(self, phase='melee', attacker=None):
-        base_save = ARMOR_SAVES.get(self.armor, 6)
-        # Camouflage: improves save in missile phase by 1 step (if not ignored by Sharpshooter)
-        if phase == 'missile' and 'Camouflage' in self.keywords:
-            if not (attacker and 'Sharpshooter' in attacker.keywords):
-                base_save = base_save - 1  # Better by one step
-
-        # Clamp save at best 2+
-        base_save = max(2, base_save)
-        return base_save
-
     def get_attack_dice(self, phase, charging=False):
         # Start with base dice for the given phase
         if phase == 'missile':
@@ -143,44 +132,110 @@ class Unit:
 
         return total_wounds
 
-    def attack(self, target_unit, phase, charging=False):
-        # Determine if Withering Fire or Relentless applies
-        armor_save_modifier = 0
-        if 'Withering Fire' in self.keywords and phase == 'missile':
-            armor_save_modifier += 1
-        if 'Relentless' in self.keywords and phase == 'melee':
-            armor_save_modifier += 1
+    def apply_terrain_effects(self, battlefield, phase='missile'):
+        """
+        Check if this unit is in any terrain and apply the effects:
+        - Forest: Add Camouflage and limit attack_range to 8" for missile attacks.
+        - Building: Add Shields 1 on ranged attacks.
+        - Hard Cover: Add Lucky keyword.
+        
+        This will return a set of temporary keywords and possibly adjust attack range.
+        """
+        if self.position is None:
+            return set(), self.attack_range
 
-        #print(f"{self.name} ({self.num_models} models) is attacking {target_unit.name} in the {phase} phase.")
-        #if charging:
-            #print(f"{self.name} is charging into combat!")
+        x, y = self.position
+        temp_keywords = set()
+        adjusted_range = self.attack_range
+
+        for terrain in battlefield.terrain_map:
+            # Check if unit is inside this terrain piece
+            if (x >= terrain["x"] and x < terrain["x"] + terrain["width"] and
+                y >= terrain["y"] and y < terrain["y"] + terrain["height"]):
+                # Inside this terrain
+                if terrain["type"] == "Forest":
+                    temp_keywords.add("Camouflage")
+                    if phase == 'missile':
+                        adjusted_range = min(adjusted_range, 8)
+                elif terrain["type"] == "Building":
+                    # Shields 1 on ranged attacks
+                    if phase == 'missile':
+                        temp_keywords.add("Shields 1")
+                elif terrain["type"] == "Hard Cover":
+                    temp_keywords.add("Lucky")
+
+        return temp_keywords, adjusted_range
+
+    def get_armor_save(self, phase='melee', attacker=None, battlefield=None):
+        # If battlefield provided, apply terrain effects
+        terrain_keywords = set()
+        if battlefield:
+            terrain_keywords, _ = self.apply_terrain_effects(battlefield, phase=phase)
+
+        # Combine terrain keywords with unit's keywords for the calculation
+        effective_keywords = set(self.keywords).union(terrain_keywords)
+
+        base_save = ARMOR_SAVES.get(self.armor, 6)
+        # Camouflage check
+        if phase == 'missile' and 'Camouflage' in effective_keywords:
+            if not (attacker and 'Sharpshooter' in attacker.keywords):
+                base_save = base_save - 1
+        # Clamp save
+        base_save = max(2, base_save)
+
+        return base_save, effective_keywords
+
+    def attack(self, target_unit, phase, charging=False, battlefield=None):
+        # Determine Withering/Relentless after terrain
+        save_mod = 0
+
+        # Apply terrain to get effective keywords for attacking unit
+        # Attack range also might change due to Forest
+        terrain_keywords, adjusted_range = self.apply_terrain_effects(battlefield, phase=phase)
+        effective_keywords = set(self.keywords).union(terrain_keywords)
+
+        # Check range if phase is missile
+        if phase == 'missile':
+            # If distance > adjusted_range, no attack. (Assuming you have distance checks)
+            # For simplicity, we ignore actual distance checks here.
+            pass
+
+        if 'Withering Fire' in effective_keywords and phase == 'missile':
+            save_mod += 1
+        if 'Relentless' in effective_keywords and phase == 'melee':
+            save_mod += 1
 
         dice_pool = self.get_attack_dice(phase, charging=charging)
-        #print(f"{self.name} is rolling {len(dice_pool)} dice: {dice_pool}")
+        total_wounds = self.roll_attack_dice(dice_pool, slayer='Slayer' in effective_keywords)
 
-        total_wounds = self.roll_attack_dice(dice_pool, slayer='Slayer' in self.keywords)
-        #print(f"{self.name} inflicted the following wounds: {total_wounds}")
+        # Let target defend, passing battlefield so target can also apply terrain effects
+        target_unit.defend(total_wounds, save_mod, attacker=self, phase=phase, battlefield=battlefield)
 
-        target_unit.defend(total_wounds, armor_save_modifier, attacker=self, phase=phase)
-
-    def defend(self, incoming_wounds, armor_save_modifier, attacker=None, phase='melee'):
-        # Calculate armor save with modifications
-        armor_save = self.get_armor_save(phase=phase, attacker=attacker)
+    def defend(self, incoming_wounds, armor_save_modifier, attacker=None, phase='melee', battlefield=None):
+        # Get armor save after terrain
+        armor_save, effective_keywords = self.get_armor_save(phase=phase, attacker=attacker, battlefield=battlefield)
         armor_save += armor_save_modifier
         armor_save = min(6, max(2, armor_save))
 
-        can_save_mortal = 'Lucky' in self.keywords
+        can_save_mortal = 'Lucky' in effective_keywords
         total_incoming = sum(incoming_wounds.values())
 
-        #print(f"{self.name} is defending against {total_incoming} incoming wounds: {incoming_wounds}")
-        #print(f"{self.name}'s armor save is {armor_save} (modifier: {armor_save_modifier}).")
+        # Check if Shields in effective keywords for ranged attacks
+        if phase == 'missile':
+            # Find any "Shields N" keyword
+            shield_value = 0
+            for kw in effective_keywords:
+                if kw.startswith('Shields'):
+                    parts = kw.split()
+                    if len(parts) > 1 and parts[1].isdigit():
+                        shield_value = int(parts[1])
+                        break
+        else:
+            shield_value = 0
 
-        # Shields
-        wounds_to_ignore = min(self.shields_remaining, total_incoming)
+        wounds_to_ignore = min(shield_value, total_incoming)
         self.shields_remaining -= wounds_to_ignore
         wounds_to_assign = total_incoming - wounds_to_ignore
-        #if wounds_to_ignore > 0:
-            #print(f"{self.name} absorbed {wounds_to_ignore} wounds with shields.")
 
         wound_queue = (
             ['mortal'] * incoming_wounds['mortal'] +
@@ -188,10 +243,8 @@ class Unit:
             ['normal'] * incoming_wounds['normal']
         )[:wounds_to_assign]
 
-        # If Assassin: attacker chooses casualties. We simulate by removing from the last model first.
-        reverse_removal = ('Assassin' in (attacker.keywords if attacker else []))
+        reverse_removal = ('Assassin' in attacker.keywords if attacker else False)
 
-        # Collect all alive models
         model_indices = [i for i, m in enumerate(self.models) if m.is_alive()]
         if reverse_removal:
             model_indices = list(reversed(model_indices))
@@ -204,7 +257,6 @@ class Unit:
             target_index = model_indices[0]
             model = self.models[target_index]
 
-            # Roll save (except if mortal and no Lucky)
             save_roll = random.randint(1, 6)
             is_mortal = (wound_type == 'mortal')
             save_successful = (save_roll >= armor_save) if (not is_mortal or can_save_mortal) else False
@@ -214,22 +266,15 @@ class Unit:
                 model.take_wound(damage)
                 if not model.is_alive():
                     casualties += 1
-                    model_indices.pop(0)  # model dead
-                    #print(f"{self.name} lost a model to {wound_type} damage.")
-            #else:
-                #print(f"{self.name} saved against {wound_type} damage with a roll of {save_roll}.")
+                    model_indices.pop(0)
 
-        #print(f"{self.name} took {casualties} casualties this phase.")
-
-        # Handle Last Stand: if unit has not activated and has Last Stand,
-        # do not remove casualties now, just store them.
         if self.last_stand_active and not self.has_activated:
             self.pending_casualties += casualties
         else:
-            # Apply casualties immediately if no Last Stand or after they've activated.
             self.apply_pending_casualties()
 
         self.check_casualties()
+
     def check_casualties(self):
         alive_models = sum(1 for model in self.models if model.is_alive())
         self.num_models = alive_models

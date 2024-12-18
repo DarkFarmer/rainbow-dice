@@ -6,12 +6,12 @@ import util
 import random
 from board_state import get_board_state, get_board_visualization
 
-def play_game(player_a, player_b, battlefield):
+def play_game(player_a, player_b, battlefield, stat_costs, keyword_costs):
     # Run a fixed number of turns, for example
     for turn_number in range(1, 5):
         #print(f"\n===== START OF TURN {turn_number} =====")
         play_turn(player_a, player_b, battlefield, turn_number)
-
+    adjust_costs_based_on_performance(player_a, player_b, stat_costs, keyword_costs)
     # End of game
     #if player_a.score > player_b.score:
         #print(f"{player_a.name} wins! Final Score: {player_a.score} vs {player_b.score}")
@@ -101,5 +101,52 @@ def score_control_points(player_a, player_b, battlefield):
         
         if a_models > b_models:
             player_a.score += 1
+            # Increment CP capture for all units from player_a in range
+            for u in player_a.units:
+                dist = util.distance(u.position, (cp.x, cp.y))
+                if dist <= 6 and u.is_alive():
+                    u.record_cp_capture()
         elif b_models > a_models:
             player_b.score += 1
+            # Increment CP capture for all units from player_b in range
+            for u in player_b.units:
+                dist = util.distance(u.position, (cp.x, cp.y))
+                if dist <= 6 and u.is_alive():
+                    u.record_cp_capture()
+
+def adjust_costs_based_on_performance(player_a, player_b, stat_costs, keyword_costs):
+    # If a unit captured a CP or destroyed an enemy unit, increase addon costs
+    # If a unit was destroyed or never scored a CP, decrease addon costs
+    delta_positive = 0.01
+    delta_negative = -0.01
+
+    for player in [player_a, player_b]:
+        for u in player.units:
+            if u.category is None:
+                # Means no modifications were applied, skip
+                continue
+            cat = u.category
+            # If unit is destroyed or never captured CP:
+            # Check destruction
+            unit_destroyed = not u.is_alive()
+
+            # Conditions for increase:
+            # If unit captured CP or destroyed enemy
+            performed_well = (u.cp_captured > 0 or u.enemies_destroyed > 0)
+            # Conditions for decrease:
+            # If unit is destroyed or no CP captured
+            performed_poorly = (unit_destroyed or u.cp_captured == 0)
+
+            # If performed well, increase cost for chosen addons
+            if performed_well:
+                for kw in u.chosen_keywords:
+                    keyword_costs[cat][kw] = max(0.0, keyword_costs[cat][kw] + delta_positive)
+                for st in u.chosen_stats:
+                    stat_costs[cat][st] = max(0.0, stat_costs[cat][st] + delta_positive)
+
+            # If performed poorly, decrease cost
+            if performed_poorly:
+                for kw in u.chosen_keywords:
+                    keyword_costs[cat][kw] = max(0.0, keyword_costs[cat][kw] + delta_negative)
+                for st in u.chosen_stats:
+                    stat_costs[cat][st] = max(0.0, stat_costs[cat][st] + delta_negative)

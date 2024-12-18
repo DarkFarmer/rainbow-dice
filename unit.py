@@ -40,6 +40,19 @@ class Unit:
         self.last_stand_active = 'Last Stand' in self.keywords
         self.degrade_amount = self._get_keyword_value('Degrade', default=0)
         self.commander_value = self._get_keyword_value('Commander', default=0)
+        self.chosen_keywords = []
+        self.chosen_stats = []
+        self.category = None
+
+        # Performance tracking
+        self.cp_captured = 0
+        self.enemies_destroyed = 0
+
+    def record_cp_capture(self):
+        self.cp_captured += 1
+
+    def record_enemy_destroyed(self):
+        self.enemies_destroyed += 1
 
     @classmethod
     def _generate_unique_id(cls):

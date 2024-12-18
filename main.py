@@ -2,6 +2,7 @@ import statistics
 import random
 from unit import Unit
 import game
+import util
 from player import Player
 import battlefield
 import setup
@@ -50,7 +51,6 @@ STAT_MODS = [
 ARMOR_TIERS = ['Unarmored', 'Light Armor', 'Medium Armor', 'Heavy Armor']
 
 # Cost dictionaries split by category
-# Categories: "<=2", "<=4", ">4"
 keyword_costs = {
     "<=2": {kw: 0.1 for kw in KEYWORDS_LIST},
     "<=4": {kw: 0.1 for kw in KEYWORDS_LIST},
@@ -63,7 +63,6 @@ stat_costs = {
     ">4": {}
 }
 
-# Initialize stat costs for each category
 base_stat_keys = [
     "num_models_10",
     "wounds_per_model+1",
@@ -187,7 +186,6 @@ def get_category(ap_cost):
         return ">4"
 
 def apply_random_modifications(unit):
-    # Determine category from base AP (before modifications)
     base_category = get_category(unit.ap_cost)
 
     k_count = num_keywords_to_add()
@@ -220,6 +218,11 @@ def apply_random_modifications(unit):
         add_cost += stat_costs[base_category][st]
 
     unit.ap_cost += add_cost
+
+    # Store chosen addons in the unit for reference at end of game
+    unit.chosen_keywords = chosen_keywords
+    unit.chosen_stats = chosen_stats
+    unit.category = base_category
 
     return base_category, chosen_keywords, chosen_stats
 
@@ -267,78 +270,141 @@ def apply_stat_mod(unit, smod):
 
     return None
 
-def adjust_costs_for_results(player_mods, winner):
-    # player_mods: list of tuples (cat, [keywords], [stats])
-    # winner: True/False
-    delta = 0.01 if winner else -0.01
-
-    for (cat, kw_list, st_list) in player_mods:
-        for kw in kw_list:
-            new_val = keyword_costs[cat][kw] + delta
-            keyword_costs[cat][kw] = new_val
-        for st in st_list:
-            new_val = stat_costs[cat][st] + delta
-            stat_costs[cat][st] = new_val
-
 def run_simulation():
-    i = 0
-    while True:
-        i += 1
-        unit_names = list(unit_templates.keys())
-        player1_choices = random.sample(unit_names, 5)
-        player2_choices = random.sample(unit_names, 5)
+    # Number of games to run per batch
+    BATCH_SIZE = 1000
+    game_number = 0
 
-        player1_units = []
-        player2_units = []
-        player1_mods = []
-        player2_mods = []
+    # Track performance of keywords and stats
+    # Structure: performance_data[category]["keywords"][kw] = {"wins":X, "losses":Y}
+    # Similarly for stats.
+    performance_data = {
+        "<=2": {"keywords": {}, "stats": {}},
+        "<=4": {"keywords": {}, "stats": {}},
+        ">4": {"keywords": {}, "stats": {}},
+    }
 
-        # Build and modify Player1 units
-        for name in player1_choices:
-            data = unit_templates[name]
-            u = create_unit(name, data)
-            cat, kws, sts = apply_random_modifications(u)
-            player1_mods.append((cat, kws, sts))
-            player1_units.append(u)
-
-        # Build and modify Player2 units
-        for name in player2_choices:
-            data = unit_templates[name]
-            u = create_unit(name, data)
-            cat, kws, sts = apply_random_modifications(u)
-            player2_mods.append((cat, kws, sts))
-            player2_units.append(u)
-
-        player1 = Player(name="Player1", units=player1_units)
-        player2 = Player(name="Player2", units=player2_units)
-
-        control_points, width, height = setup.setup_battlefield()
-        bf = battlefield.Battlefield(width, height, control_points, [])
-        setup.place_terrain(bf)
-        setup.place_units_randomly(player1, player2)
-
-        game.play_game(player1, player2, bf)
-
-        if player1.score > player2.score:
-            adjust_costs_for_results(player1_mods, True)
-            adjust_costs_for_results(player2_mods, False)
-        elif player2.score > player1.score:
-            adjust_costs_for_results(player1_mods, False)
-            adjust_costs_for_results(player2_mods, True)
-        else:
-            # Draw: no cost adjustments
+    # Initialize performance_data counters
+    for cat in performance_data:
+        for kw in KEYWORDS_LIST:
+            performance_data[cat]["keywords"][kw] = {"wins":0,"losses":0}
+        for stcat in stat_costs[cat].keys():
+            performance_data[cat]["stats"][stcat] = {"wins":0,"losses":0}
+        # Also include dice expansions:
+        for st in stat_costs[cat].keys():
+            # already covered above
             pass
 
-        if i % 100 == 0:
-            print(f"--- After Run {i} ---")
-            for cat in ["<=2", "<=4", ">4"]:
-                print(f"Category {cat}:")
-                print(" Keyword Costs:")
-                for kw, c in keyword_costs[cat].items():
-                    print(f"  {kw}: {c:.2f}")
-                print(" Stat Costs:")
-                for st, c in stat_costs[cat].items():
-                    print(f"  {st}: {c:.2f}")
+    while True:
+        # Run a batch of BATCH_SIZE games
+        for _ in range(BATCH_SIZE):
+            game_number += 1
+            unit_names = list(unit_templates.keys())
+            player1_choices = random.sample(unit_names, 5)
+            player2_choices = random.sample(unit_names, 5)
+
+            player1_units = []
+            player2_units = []
+            player1_mods = []
+            player2_mods = []
+
+            for name in player1_choices:
+                data = unit_templates[name]
+                u = create_unit(name, data)
+                cat, kws, sts = apply_random_modifications(u)
+                player1_mods.append((cat, kws, sts))
+                player1_units.append(u)
+
+            for name in player2_choices:
+                data = unit_templates[name]
+                u = create_unit(name, data)
+                cat, kws, sts = apply_random_modifications(u)
+                player2_mods.append((cat, kws, sts))
+                player2_units.append(u)
+
+            player1 = Player(name="Player1", units=player1_units)
+            player2 = Player(name="Player2", units=player2_units)
+
+            control_points, width, height = setup.setup_battlefield()
+            bf = battlefield.Battlefield(width, height, control_points, [])
+            setup.place_terrain(bf)
+            setup.place_units_randomly(player1, player2)
+
+            game.play_game(player1, player2, bf, stat_costs, keyword_costs)
+
+            # Determine winner, record performance
+            if player1.score > player2.score:
+                # player1 wins, increment "wins" for their keywords/stats
+                # player2 loses, increment "losses" for theirs
+                for (cat, kw_list, st_list) in player1_mods:
+                    for kw in kw_list:
+                        performance_data[cat]["keywords"][kw]["wins"] += 1
+                    for st in st_list:
+                        performance_data[cat]["stats"][st]["wins"] += 1
+
+                for (cat, kw_list, st_list) in player2_mods:
+                    for kw in kw_list:
+                        performance_data[cat]["keywords"][kw]["losses"] += 1
+                    for st in st_list:
+                        performance_data[cat]["stats"][st]["losses"] += 1
+
+            elif player2.score > player1.score:
+                # player2 wins
+                for (cat, kw_list, st_list) in player2_mods:
+                    for kw in kw_list:
+                        performance_data[cat]["keywords"][kw]["wins"] += 1
+                    for st in st_list:
+                        performance_data[cat]["stats"][st]["wins"] += 1
+
+                for (cat, kw_list, st_list) in player1_mods:
+                    for kw in kw_list:
+                        performance_data[cat]["keywords"][kw]["losses"] += 1
+                    for st in st_list:
+                        performance_data[cat]["stats"][st]["losses"] += 1
+            else:
+                # Draw: no changes
+                pass
+
+        # After BATCH_SIZE games, do batch cost adjustment
+        # For each category, keyword, and stat:
+        # net = wins - losses
+        # if net > 0 => increase cost, if net <0 => decrease cost
+        # Then reset counters for the next batch
+        for cat in performance_data:
+            # Keywords
+            for kw, data in performance_data[cat]["keywords"].items():
+                net = data["wins"] - data["losses"]
+                if net != 0:
+                    adjustment = 0.01 * net  # Base adjustment scaled by performance
+                    current_cost = keyword_costs[cat][kw]
+                    keyword_costs[cat][kw] = util.ema_adjustment(current_cost, adjustment)
+
+                # Reset counters
+                data["wins"] = 0
+                data["losses"] = 0
+
+            # Stats
+            for st, data in performance_data[cat]["stats"].items():
+                net = data["wins"] - data["losses"]
+                if net != 0:
+                    adjustment = 0.01 * net  # Base adjustment scaled by performance
+                    current_cost = stat_costs[cat][st]
+                    stat_costs[cat][st] = util.ema_adjustment(current_cost, adjustment)
+
+                # Reset counters
+                data["wins"] = 0
+                data["losses"] = 0
+        # Print results after each batch
+        print(f"--- After {game_number} Games (Batch of {BATCH_SIZE}) ---")
+        for cat in ["<=2", "<=4", ">4"]:
+            print(f"Category {cat}:")
+            print(" Keyword Costs:")
+            for kw, c in keyword_costs[cat].items():
+                print(f"  {kw}: {c:.2f}")
+            print(" Stat Costs:")
+            for st, c in stat_costs[cat].items():
+                print(f"  {st}: {c:.2f}")
+        print()
 
 if __name__ == "__main__":
     run_simulation()

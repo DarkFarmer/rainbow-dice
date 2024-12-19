@@ -52,7 +52,7 @@ def place_terrain(battlefield):
 
     # Terrain area between squares x=1..2 and y=1..2
     # That gives us a 2x2 area = 4 possible squares: (1,1), (1,2), (2,1), (2,2)
-    possible_squares = [(1,1),(1,2),(2,1),(2,2)]
+    possible_squares = [(1,1),(1,2),(2,1),(2,2),(3,1),(3,2),(4,1),(4,2),(5,1),(5,2)]
     random.shuffle(possible_squares)
 
     terrain_types = ["Forest", "Building", "Hard Cover"]

@@ -50,7 +50,7 @@ STAT_MODS = [
 
 ARMOR_TIERS = ['Unarmored', 'Light Armor', 'Medium Armor', 'Heavy Armor']
 
-# Cost dictionaries split by category
+# Initial costs for keywords and stats (starting at a small positive value)
 keyword_costs = {
     "<=2": {kw: 0.1 for kw in KEYWORDS_LIST},
     "<=4": {kw: 0.1 for kw in KEYWORDS_LIST},
@@ -169,18 +169,21 @@ def create_unit(name, data):
         armor=armor,
         movement=data["movement"],
         ap_cost=data["ap_cost"],
-        missile_attack_dice=missile_attack_dice,
-        melee_attack_dice=melee_attack_dice,
+        missile_attack_dice=missile_attack_dice[:],
+        melee_attack_dice=melee_attack_dice[:],
         attack_range=data["range"],
         special_rules=None,
         keywords=[]
     )
+    # Store base dice so modifications can reference them
+    u.base_melee_attack_dice = u.base_melee_attack_dice[:]
+    u.base_missile_attack_dice = u.base_missile_attack_dice[:]
     return u
 
 def get_category(ap_cost):
     if ap_cost <= 2:
         return "<=2"
-    elif ap_cost <=4:
+    elif ap_cost <= 4:
         return "<=4"
     else:
         return ">4"
@@ -227,16 +230,17 @@ def apply_random_modifications(unit):
     return base_category, chosen_keywords, chosen_stats
 
 def apply_stat_mod(unit, smod):
+    # Ensure modifications reflect on the actual unit stats/dice.
     if smod == "num_models":
         if unit.num_models < 10:
+            # Increase model count
+            diff = 10 - unit.num_models
             unit.num_models = 10
-            # Add 5 additional basic attack dice for both melee and missile
+            # Add one basic die per added model for both melee and missile if possible
             if unit.base_melee_attack_dice:
-                basic_melee_die = unit.base_melee_attack_dice[0]  # First die type in melee pool
-                unit.base_melee_attack_dice.extend([basic_melee_die] * 5)
+                unit.base_melee_attack_dice.extend([unit.base_melee_attack_dice[0]] * diff)
             if unit.base_missile_attack_dice:
-                basic_missile_die = unit.base_missile_attack_dice[0]  # First die type in missile pool
-                unit.base_missile_attack_dice.extend([basic_missile_die] * 5)
+                unit.base_missile_attack_dice.extend([unit.base_missile_attack_dice[0]] * diff)
             return "num_models_10"
 
     elif smod == "wounds_per_model":
@@ -256,12 +260,12 @@ def apply_stat_mod(unit, smod):
 
     elif smod == "missile_attack_dice":
         die_type = random.choice(list(DICE_TYPES.keys()))
-        unit.base_missile_attack_dice.append(die_type)
+        unit.base_missile_attack_dice.append(DICE_MAPPING[die_type])
         return f"missile_die_{die_type}"
 
     elif smod == "melee_attack_dice":
         die_type = random.choice(list(DICE_TYPES.keys()))
-        unit.base_melee_attack_dice.append(die_type)
+        unit.base_melee_attack_dice.append(DICE_MAPPING[die_type])
         return f"melee_die_{die_type}"
 
     elif smod == "attack_range":
@@ -273,11 +277,9 @@ def apply_stat_mod(unit, smod):
 def run_simulation():
     # Number of games to run per batch
     BATCH_SIZE = 1000
+    MAX_BATCHES = 10000  # Limit for demonstration, can be removed for long runs
     game_number = 0
 
-    # Track performance of keywords and stats
-    # Structure: performance_data[category]["keywords"][kw] = {"wins":X, "losses":Y}
-    # Similarly for stats.
     performance_data = {
         "<=2": {"keywords": {}, "stats": {}},
         "<=4": {"keywords": {}, "stats": {}},
@@ -288,14 +290,10 @@ def run_simulation():
     for cat in performance_data:
         for kw in KEYWORDS_LIST:
             performance_data[cat]["keywords"][kw] = {"wins":0,"losses":0}
-        for stcat in stat_costs[cat].keys():
-            performance_data[cat]["stats"][stcat] = {"wins":0,"losses":0}
-        # Also include dice expansions:
         for st in stat_costs[cat].keys():
-            # already covered above
-            pass
+            performance_data[cat]["stats"][st] = {"wins":0,"losses":0}
 
-    while True:
+    for batch in range(MAX_BATCHES):
         # Run a batch of BATCH_SIZE games
         for _ in range(BATCH_SIZE):
             game_number += 1
@@ -334,8 +332,7 @@ def run_simulation():
 
             # Determine winner, record performance
             if player1.score > player2.score:
-                # player1 wins, increment "wins" for their keywords/stats
-                # player2 loses, increment "losses" for theirs
+                # player1 wins
                 for (cat, kw_list, st_list) in player1_mods:
                     for kw in kw_list:
                         performance_data[cat]["keywords"][kw]["wins"] += 1
@@ -361,31 +358,29 @@ def run_simulation():
                         performance_data[cat]["keywords"][kw]["losses"] += 1
                     for st in st_list:
                         performance_data[cat]["stats"][st]["losses"] += 1
-            else:
-                # Draw: no changes
-                pass
 
-        # After BATCH_SIZE games, do batch cost adjustment
-        # For each category, keyword, and stat:
-        # net = wins - losses
-        # if net > 0 => increase cost, if net <0 => decrease cost
-        # Then reset counters for the next batch
+            # Draws do not affect performance_data
+
+        # After BATCH_SIZE games, adjust costs
         for cat in performance_data:
             # Keywords
             for kw, data in performance_data[cat]["keywords"].items():
                 net = data["wins"] - data["losses"]
                 if net != 0:
-                    adjustment = 0.01 * net  # Base adjustment scaled by performance
+                    # A simple linear update approach:
+                    # Increase cost if net > 0, decrease if net < 0
                     current_cost = keyword_costs[cat][kw]
+                    adjustment = 0.01 * net  # scale by net performance
+                    new_cost = current_cost + adjustment
 
-                    # Apply EMA adjustment
-                    new_cost = util.ema_adjustment(current_cost, adjustment)
-
-                    # Ensure no cost drops below zero unless the keyword is "Degrade"
-                    if kw != "Degrade" and new_cost < 0:
-                        new_cost = 0
-                    elif kw == "Degrade" and new_cost > 0:
-                        new_cost = 0
+                    # Apply constraints
+                    if kw != "Degrade":
+                        if new_cost < 0:
+                            new_cost = 0.0
+                    else:
+                        # "Degrade" should never have positive cost
+                        if new_cost > 0:
+                            new_cost = 0.0
 
                     keyword_costs[cat][kw] = new_cost
 
@@ -397,16 +392,11 @@ def run_simulation():
             for st, data in performance_data[cat]["stats"].items():
                 net = data["wins"] - data["losses"]
                 if net != 0:
-                    adjustment = 0.01 * net  # Base adjustment scaled by performance
                     current_cost = stat_costs[cat][st]
-
-                    # Apply EMA adjustment
-                    new_cost = util.ema_adjustment(current_cost, adjustment)
-
-                    # Ensure no cost drops below zero
+                    adjustment = 0.01 * net
+                    new_cost = current_cost + adjustment
                     if new_cost < 0:
                         new_cost = 0
-
                     stat_costs[cat][st] = new_cost
 
                 # Reset counters
@@ -414,15 +404,15 @@ def run_simulation():
                 data["losses"] = 0
 
         # Print results after each batch
-        print(f"--- After {game_number} Games (Batch of {BATCH_SIZE}) ---")
+        print(f"--- After {game_number} Games (Batch {batch+1} of {MAX_BATCHES}) ---")
         for cat in ["<=2", "<=4", ">4"]:
             print(f"Category {cat}:")
             print(" Keyword Costs:")
             for kw, c in keyword_costs[cat].items():
-                print(f"  {kw}: {c:.2f}")
+                print(f"  {kw}: {c:.4f}")
             print(" Stat Costs:")
             for st, c in stat_costs[cat].items():
-                print(f"  {st}: {c:.2f}")
+                print(f"  {st}: {c:.4f}")
         print()
 
 if __name__ == "__main__":

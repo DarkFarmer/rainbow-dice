@@ -94,6 +94,11 @@ def get_board_visualization(player_a, player_b, battlefield, state):
     Each cell represents ~4 inches.
     Control points are marked as C<ID>.
     Player A units as A<ID>, Player B units as B<ID>.
+    Terrain:
+      Forest: F
+      Building: B
+      Hard Cover: H
+
     If multiple items in the same cell, separate by '|'.
 
     Top-left corner is (0,0). 
@@ -116,9 +121,7 @@ def get_board_visualization(player_a, player_b, battlefield, state):
             else:
                 grid[cy][cx] = f"{grid[cy][cx]}|C{cp['id']}"
 
-    # We need mapping from state units back to players
-    # We'll assume IDs assigned as in get_board_state
-    # Player A units
+    # Mark Player A units
     for u in state['players'][player_a.name]['units']:
         if u['position'] is None:
             continue
@@ -131,7 +134,7 @@ def get_board_visualization(player_a, player_b, battlefield, state):
             else:
                 grid[uy][ux] = f"{grid[uy][ux]}|{label}"
 
-    # Player B units
+    # Mark Player B units
     for u in state['players'][player_b.name]['units']:
         if u['position'] is None:
             continue
@@ -144,9 +147,46 @@ def get_board_visualization(player_a, player_b, battlefield, state):
             else:
                 grid[uy][ux] = f"{grid[uy][ux]}|{label}"
 
+    # Mark Terrain
+    # For each cell, check if it falls within any terrain piece
+    # If '.' remains and inside terrain, replace '.' with terrain label
+    # If already occupied, append terrain label
+    for terrain in battlefield.terrain_map:
+        t_type = terrain["type"]
+        # Choose a label for the terrain
+        if t_type == "Forest":
+            t_label = '|'
+        elif t_type == "Building":
+            t_label = '\u25A1'
+        elif t_type == "Hard Cover":
+            t_label = '*'
+        else:
+            t_label = '`'  # fallback
+
+        # Determine the cell range covered by this terrain
+        # Terrain is 10x10 inches, each cell = 4 inches, so terrain spans ~2-3 cells each dimension
+        start_x = terrain["x"] // scale
+        end_x = (terrain["x"] + terrain["width"] - 1) // scale
+        start_y = terrain["y"] // scale
+        end_y = (terrain["y"] + terrain["height"] - 1) // scale
+
+        for cy in range(start_y, end_y+1):
+            for cx in range(start_x, end_x+1):
+                if 0 <= cy < height_cells and 0 <= cx < width_cells:
+                    if grid[cy][cx] == '.':
+                        grid[cy][cx] = t_label
+                    else:
+                        # If not just a dot, append terrain if not already present
+                        # Check if terrain label not in there to avoid duplicates
+                        cell_content = grid[cy][cx]
+                        # To avoid multiple terrain labels, check if already present
+                        if t_label not in cell_content:
+                            grid[cy][cx] = f"{cell_content}|{t_label}"
+
     # Build the multi-line string
     lines = []
     for row in range(height_cells):
         lines.append(' '.join(grid[row]))
 
     return "\n".join(lines)
+

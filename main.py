@@ -377,7 +377,17 @@ def run_simulation():
                 if net != 0:
                     adjustment = 0.01 * net  # Base adjustment scaled by performance
                     current_cost = keyword_costs[cat][kw]
-                    keyword_costs[cat][kw] = util.ema_adjustment(current_cost, adjustment)
+
+                    # Apply EMA adjustment
+                    new_cost = util.ema_adjustment(current_cost, adjustment)
+
+                    # Ensure no cost drops below zero unless the keyword is "Degrade"
+                    if kw != "Degrade" and new_cost < 0:
+                        new_cost = 0
+                    elif kw == "Degrade" and new_cost > 0:
+                        new_cost = 0
+
+                    keyword_costs[cat][kw] = new_cost
 
                 # Reset counters
                 data["wins"] = 0
@@ -389,11 +399,20 @@ def run_simulation():
                 if net != 0:
                     adjustment = 0.01 * net  # Base adjustment scaled by performance
                     current_cost = stat_costs[cat][st]
-                    stat_costs[cat][st] = util.ema_adjustment(current_cost, adjustment)
+
+                    # Apply EMA adjustment
+                    new_cost = util.ema_adjustment(current_cost, adjustment)
+
+                    # Ensure no cost drops below zero
+                    if new_cost < 0:
+                        new_cost = 0
+
+                    stat_costs[cat][st] = new_cost
 
                 # Reset counters
                 data["wins"] = 0
                 data["losses"] = 0
+
         # Print results after each batch
         print(f"--- After {game_number} Games (Batch of {BATCH_SIZE}) ---")
         for cat in ["<=2", "<=4", ">4"]:

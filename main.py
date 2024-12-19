@@ -2,11 +2,11 @@ import statistics
 import random
 from unit import Unit
 import game
-import util
 from player import Player
 import battlefield
 import setup
-from dice import DICE_TYPES
+
+from dice import DICE_TYPES  # Assuming dice.py is available and has DICE_TYPES
 
 DICE_MAPPING = {
     'White': 'White',
@@ -22,6 +22,7 @@ DICE_MAPPING = {
     'Crimson': 'Crimson',
 }
 
+# Keywords list
 KEYWORDS_LIST = [
     "Shields",
     "Last Stand",
@@ -38,47 +39,21 @@ KEYWORDS_LIST = [
     "Assassin"
 ]
 
+# Possible stat modifications
 STAT_MODS = [
-    "num_models",
-    "wounds_per_model",
-    "armor",
-    "movement",
-    "missile_attack_dice",
-    "melee_attack_dice",
-    "attack_range"
+    "num_models",          # increase from 5 to 10 (if applicable)
+    "wounds_per_model",    # increase by 1
+    "armor",               # improve one step
+    "movement",            # increase by 2
+    "missile_attack_dice", # add one random die
+    "melee_attack_dice",   # add one random die
+    "attack_range"         # increase by 4
 ]
 
 ARMOR_TIERS = ['Unarmored', 'Light Armor', 'Medium Armor', 'Heavy Armor']
-
-# Initial costs for keywords and stats (starting at a small positive value)
-keyword_costs = {
-    "<=2": {kw: 0.1 for kw in KEYWORDS_LIST},
-    "<=4": {kw: 0.1 for kw in KEYWORDS_LIST},
-    ">4": {kw: 0.1 for kw in KEYWORDS_LIST}
-}
-
-stat_costs = {
-    "<=2": {},
-    "<=4": {},
-    ">4": {}
-}
-
-base_stat_keys = [
-    "num_models_10",
-    "wounds_per_model+1",
-    "armor_improved",
-    "movement+2",
-    "attack_range+4",
-]
-
-for cat in stat_costs:
-    for stk in base_stat_keys:
-        stat_costs[cat][stk] = 0.1
-    # For dice additions
-    for dtype in DICE_TYPES.keys():
-        stat_costs[cat][f"missile_die_{dtype}"] = 0.1
-        stat_costs[cat][f"melee_die_{dtype}"] = 0.1
-
+# Probability distributions (tweak as needed):
+# Keywords: 0 keywords ~70%, 1 keyword ~20%, 2 keywords ~10%
+# Stats: 0 mods ~50%, 1 mod ~30%, 2 mods ~15%, 3 mods ~4%, 4 mods ~1%
 def num_keywords_to_add():
     x = random.random()
     if x < 0.7:
@@ -101,6 +76,7 @@ def num_stats_to_add():
     else:
         return 4
 
+# Unit templates as given
 unit_templates = {
     "Basic Infantry": {
         "num_models": 5, "movement": 6, "armor_save": 6, "wounds": 1,
@@ -169,251 +145,208 @@ def create_unit(name, data):
         armor=armor,
         movement=data["movement"],
         ap_cost=data["ap_cost"],
-        missile_attack_dice=missile_attack_dice[:],
-        melee_attack_dice=melee_attack_dice[:],
+        missile_attack_dice=missile_attack_dice,
+        melee_attack_dice=melee_attack_dice,
         attack_range=data["range"],
         special_rules=None,
         keywords=[]
     )
-    # Store base dice so modifications can reference them
-    u.base_melee_attack_dice = u.base_melee_attack_dice[:]
-    u.base_missile_attack_dice = u.base_missile_attack_dice[:]
     return u
+
+# Tracking dictionaries:
+# keys: category ("<=2 AP", "<=4 AP", ">4 AP"), then keyword/stat -> track occurrences and performance
+keyword_stats = {
+    "<=2": {},
+    "<=4": {},
+    ">4": {}
+}
+stat_mod_stats = {
+    "<=2": {},
+    "<=4": {},
+    ">4": {}
+}
 
 def get_category(ap_cost):
     if ap_cost <= 2:
         return "<=2"
-    elif ap_cost <= 4:
+    elif ap_cost <=4:
         return "<=4"
     else:
         return ">4"
 
 def apply_random_modifications(unit):
-    base_category = get_category(unit.ap_cost)
+    base_ap = unit.ap_cost
+    category = get_category(base_ap)
 
-    k_count = num_keywords_to_add()
-    s_count = num_stats_to_add()
-
-    chosen_keywords = []
-    chosen_stats = []
+    applied_keywords = []
+    applied_stats = []
 
     # Add keywords
+    k_count = num_keywords_to_add()
     if k_count > 0:
-        picked_keywords = random.sample(KEYWORDS_LIST, k_count)
-        for kw in picked_keywords:
+        chosen_keywords = random.sample(KEYWORDS_LIST, k_count)
+        for kw in chosen_keywords:
             unit.keywords.append(kw)
-            chosen_keywords.append(kw)
+            # track keyword application
+            keyword_stats[category].setdefault(kw, {"count":0, "wins":0, "losses":0})
+            keyword_stats[category][kw]["count"] += 1
+            applied_keywords.append(kw)
 
     # Add stat modifications
+    s_count = num_stats_to_add()
     if s_count > 0:
-        chosen_mods = random.sample(STAT_MODS, s_count)
-        for smod in chosen_mods:
-            stat_key = apply_stat_mod(unit, smod)
-            if stat_key:
-                chosen_stats.append(stat_key)
+        chosen_stats = random.sample(STAT_MODS, s_count)
+        for smod in chosen_stats:
+            apply_stat_mod(unit, smod, category, applied_stats)
 
-    # Calculate cost from this category
-    add_cost = 0.0
-    for kw in chosen_keywords:
-        add_cost += keyword_costs[base_category][kw]
+    return applied_keywords, applied_stats
 
-    for st in chosen_stats:
-        add_cost += stat_costs[base_category][st]
-
-    unit.ap_cost += add_cost
-
-    # Store chosen addons in the unit for reference at end of game
-    unit.chosen_keywords = chosen_keywords
-    unit.chosen_stats = chosen_stats
-    unit.category = base_category
-
-    return base_category, chosen_keywords, chosen_stats
-
-def apply_stat_mod(unit, smod):
-    # Ensure modifications reflect on the actual unit stats/dice.
+def apply_stat_mod(unit, smod, category, applied_stats):
+    # Apply the chosen stat modification to the unit
+    # Also track the modification
     if smod == "num_models":
+        # increase from 5 to 10 if unit has less than 10 now
         if unit.num_models < 10:
-            # Increase model count
-            diff = 10 - unit.num_models
             unit.num_models = 10
-            # Add one basic die per added model for both melee and missile if possible
-            if unit.base_melee_attack_dice:
-                unit.base_melee_attack_dice.extend([unit.base_melee_attack_dice[0]] * diff)
-            if unit.base_missile_attack_dice:
-                unit.base_missile_attack_dice.extend([unit.base_missile_attack_dice[0]] * diff)
-            return "num_models_10"
+            # Need to add models' dice?
+            # For simplicity, assume base dice arrays scale with num_models.  
+            # Just track occurrence.
+            stat_mod_stats[category].setdefault("num_models_10", {"count":0, "wins":0, "losses":0})
+            stat_mod_stats[category]["num_models_10"]["count"] += 1
+            applied_stats.append("num_models_10")
 
     elif smod == "wounds_per_model":
         unit.wounds_per_model += 1
-        return "wounds_per_model+1"
+        stat_mod_stats[category].setdefault("wounds_per_model+1", {"count":0, "wins":0, "losses":0})
+        stat_mod_stats[category]["wounds_per_model+1"]["count"] += 1
+        applied_stats.append("wounds_per_model+1")
 
     elif smod == "armor":
-        if unit.armor in ARMOR_TIERS:
-            idx = ARMOR_TIERS.index(unit.armor)
-            if idx < len(ARMOR_TIERS)-1:
-                unit.armor = ARMOR_TIERS[idx+1]
-                return "armor_improved"
+        # improve armor one step if possible
+        current_index = ARMOR_TIERS.index(unit.armor) if unit.armor in ARMOR_TIERS else 0
+        if current_index < len(ARMOR_TIERS)-1:
+            # improve one step
+            unit.armor = ARMOR_TIERS[current_index+1]
+            stat_mod_stats[category].setdefault("armor_improved", {"count":0, "wins":0, "losses":0})
+            stat_mod_stats[category]["armor_improved"]["count"] += 1
+            applied_stats.append("armor_improved")
 
     elif smod == "movement":
         unit.movement += 2
-        return "movement+2"
+        stat_mod_stats[category].setdefault("movement+2", {"count":0, "wins":0, "losses":0})
+        stat_mod_stats[category]["movement+2"]["count"] += 1
+        applied_stats.append("movement+2")
 
     elif smod == "missile_attack_dice":
+        # add one random die type
         die_type = random.choice(list(DICE_TYPES.keys()))
-        unit.base_missile_attack_dice.append(DICE_MAPPING[die_type])
-        return f"missile_die_{die_type}"
+        unit.base_missile_attack_dice.append(die_type)
+        stat_mod_stats[category].setdefault(f"missile_die_{die_type}", {"count":0, "wins":0, "losses":0})
+        stat_mod_stats[category][f"missile_die_{die_type}"]["count"] += 1
+        applied_stats.append(f"missile_die_{die_type}")
 
     elif smod == "melee_attack_dice":
         die_type = random.choice(list(DICE_TYPES.keys()))
-        unit.base_melee_attack_dice.append(DICE_MAPPING[die_type])
-        return f"melee_die_{die_type}"
+        unit.base_melee_attack_dice.append(die_type)
+        stat_mod_stats[category].setdefault(f"melee_die_{die_type}", {"count":0, "wins":0, "losses":0})
+        stat_mod_stats[category][f"melee_die_{die_type}"]["count"] += 1
+        applied_stats.append(f"melee_die_{die_type}")
 
     elif smod == "attack_range":
         unit.attack_range += 4
-        return "attack_range+4"
+        stat_mod_stats[category].setdefault("attack_range+4", {"count":0, "wins":0, "losses":0})
+        stat_mod_stats[category]["attack_range+4"]["count"] += 1
+        applied_stats.append("attack_range+4")
 
-    return None
 
 def run_simulation():
-    # Number of games to run per batch
-    BATCH_SIZE = 1000
-    MAX_BATCHES = 10000  # Limit for demonstration, can be removed for long runs
-    game_number = 0
+    i = 0
+    while True:
+        i += 1
+        unit_names = list(unit_templates.keys())
+        player1_choices = random.sample(unit_names, 5)
+        player2_choices = random.sample(unit_names, 5)
 
-    performance_data = {
-        "<=2": {"keywords": {}, "stats": {}},
-        "<=4": {"keywords": {}, "stats": {}},
-        ">4": {"keywords": {}, "stats": {}},
-    }
+        player1_units = []
+        player2_units = []
 
-    # Initialize performance_data counters
-    for cat in performance_data:
-        for kw in KEYWORDS_LIST:
-            performance_data[cat]["keywords"][kw] = {"wins":0,"losses":0}
-        for st in stat_costs[cat].keys():
-            performance_data[cat]["stats"][st] = {"wins":0,"losses":0}
+        # Track modifications for each player this round
+        player1_mods = [] # list of (ap_category, [keywords], [stats])
+        player2_mods = []
 
-    for batch in range(MAX_BATCHES):
-        # Run a batch of BATCH_SIZE games
-        for _ in range(BATCH_SIZE):
-            game_number += 1
-            unit_names = list(unit_templates.keys())
-            player1_choices = random.sample(unit_names, 5)
-            player2_choices = random.sample(unit_names, 5)
+        # Build and modify Player1 units
+        for name in player1_choices:
+            data = unit_templates[name]
+            u = create_unit(name, data)
+            kw, st = apply_random_modifications(u)
+            player1_mods.append((get_category(data["ap_cost"]), kw, st))
+            player1_units.append(u)
 
-            player1_units = []
-            player2_units = []
-            player1_mods = []
-            player2_mods = []
+        # Build and modify Player2 units
+        for name in player2_choices:
+            data = unit_templates[name]
+            u = create_unit(name, data)
+            kw, st = apply_random_modifications(u)
+            player2_mods.append((get_category(data["ap_cost"]), kw, st))
+            player2_units.append(u)
 
-            for name in player1_choices:
-                data = unit_templates[name]
-                u = create_unit(name, data)
-                cat, kws, sts = apply_random_modifications(u)
-                player1_mods.append((cat, kws, sts))
-                player1_units.append(u)
+        player1 = Player(name="Player1", units=player1_units)
+        player2 = Player(name="Player2", units=player2_units)
 
-            for name in player2_choices:
-                data = unit_templates[name]
-                u = create_unit(name, data)
-                cat, kws, sts = apply_random_modifications(u)
-                player2_mods.append((cat, kws, sts))
-                player2_units.append(u)
+        control_points, width, height = setup.setup_battlefield()
+        bf = battlefield.Battlefield(width, height, control_points, [])
+        setup.place_units_randomly(player1, player2)
 
-            player1 = Player(name="Player1", units=player1_units)
-            player2 = Player(name="Player2", units=player2_units)
+        game.play_game(player1, player2, bf, [],[])
 
-            control_points, width, height = setup.setup_battlefield()
-            bf = battlefield.Battlefield(width, height, control_points, [])
-            setup.place_terrain(bf)
-            setup.place_units_randomly(player1, player2)
+        # Determine result
+        if player1.score > player2.score:
+            winner = "Player1"
+        elif player2.score > player1.score:
+            winner = "Player2"
+        else:
+            winner = None
 
-            game.play_game(player1, player2, bf, stat_costs, keyword_costs)
+        # Update win/loss counts for keywords and stats
+        def update_results(mods_list, is_winner):
+            for (cat, kw_list, st_list) in mods_list:
+                for kw in kw_list:
+                    if kw in keyword_stats[cat]:
+                        if is_winner:
+                            keyword_stats[cat][kw]["wins"] += 1
+                        else:
+                            keyword_stats[cat][kw]["losses"] += 1
+                for st in st_list:
+                    if st in stat_mod_stats[cat]:
+                        if is_winner:
+                            stat_mod_stats[cat][st]["wins"] += 1
+                        else:
+                            stat_mod_stats[cat][st]["losses"] += 1
 
-            # Determine winner, record performance
-            if player1.score > player2.score:
-                # player1 wins
-                for (cat, kw_list, st_list) in player1_mods:
-                    for kw in kw_list:
-                        performance_data[cat]["keywords"][kw]["wins"] += 1
-                    for st in st_list:
-                        performance_data[cat]["stats"][st]["wins"] += 1
+        if winner == "Player1":
+            update_results(player1_mods, True)
+            update_results(player2_mods, False)
+        elif winner == "Player2":
+            update_results(player1_mods, False)
+            update_results(player2_mods, True)
+        else:
+            # Draw - no wins/losses increment
+            pass
 
-                for (cat, kw_list, st_list) in player2_mods:
-                    for kw in kw_list:
-                        performance_data[cat]["keywords"][kw]["losses"] += 1
-                    for st in st_list:
-                        performance_data[cat]["stats"][st]["losses"] += 1
+        # Print summary occasionally
+        if i % 100 == 0:
+            print(f"--- After Run {i} ---")
+            print("Keyword Stats:")
+            for cat in keyword_stats:
+                print(f"Category {cat}:")
+                for kw, data in keyword_stats[cat].items():
+                    print(f"  {kw}: count={data['count']}, wins={data['wins']}, losses={data['losses']}")
 
-            elif player2.score > player1.score:
-                # player2 wins
-                for (cat, kw_list, st_list) in player2_mods:
-                    for kw in kw_list:
-                        performance_data[cat]["keywords"][kw]["wins"] += 1
-                    for st in st_list:
-                        performance_data[cat]["stats"][st]["wins"] += 1
-
-                for (cat, kw_list, st_list) in player1_mods:
-                    for kw in kw_list:
-                        performance_data[cat]["keywords"][kw]["losses"] += 1
-                    for st in st_list:
-                        performance_data[cat]["stats"][st]["losses"] += 1
-
-            # Draws do not affect performance_data
-
-        # After BATCH_SIZE games, adjust costs
-        for cat in performance_data:
-            # Keywords
-            for kw, data in performance_data[cat]["keywords"].items():
-                net = data["wins"] - data["losses"]
-                if net != 0:
-                    # A simple linear update approach:
-                    # Increase cost if net > 0, decrease if net < 0
-                    current_cost = keyword_costs[cat][kw]
-                    adjustment = 0.01 * net  # scale by net performance
-                    new_cost = current_cost + adjustment
-
-                    # Apply constraints
-                    if kw != "Degrade":
-                        if new_cost < 0:
-                            new_cost = 0.0
-                    else:
-                        # "Degrade" should never have positive cost
-                        if new_cost > 0:
-                            new_cost = 0.0
-
-                    keyword_costs[cat][kw] = new_cost
-
-                # Reset counters
-                data["wins"] = 0
-                data["losses"] = 0
-
-            # Stats
-            for st, data in performance_data[cat]["stats"].items():
-                net = data["wins"] - data["losses"]
-                if net != 0:
-                    current_cost = stat_costs[cat][st]
-                    adjustment = 0.01 * net
-                    new_cost = current_cost + adjustment
-                    if new_cost < 0:
-                        new_cost = 0
-                    stat_costs[cat][st] = new_cost
-
-                # Reset counters
-                data["wins"] = 0
-                data["losses"] = 0
-
-        # Print results after each batch
-        print(f"--- After {game_number} Games (Batch {batch+1} of {MAX_BATCHES}) ---")
-        for cat in ["<=2", "<=4", ">4"]:
-            print(f"Category {cat}:")
-            print(" Keyword Costs:")
-            for kw, c in keyword_costs[cat].items():
-                print(f"  {kw}: {c:.4f}")
-            print(" Stat Costs:")
-            for st, c in stat_costs[cat].items():
-                print(f"  {st}: {c:.4f}")
-        print()
+            print("Stat Mod Stats:")
+            for cat in stat_mod_stats:
+                print(f"Category {cat}:")
+                for st, data in stat_mod_stats[cat].items():
+                    print(f"  {st}: count={data['count']}, wins={data['wins']}, losses={data['losses']}")
 
 if __name__ == "__main__":
     run_simulation()

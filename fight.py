@@ -53,9 +53,12 @@ def simulate_fight(unit_a, unit_b, active_player, battlefield, initial_distance=
                 "turns": 1,
                 "wounds_by_phase": total_wounds_by_phase,
             }
-
     # Perform a melee attack if in melee phase
     if phase == 'melee':
+        if charging:
+            unit_a.add_melee_engagement(unit_b)
+            unit_b.add_melee_engagement(unit_a)
+            
         initial_models = unit_b.num_models
         unit_a.attack(unit_b, 'melee', charging=charging, battlefield=battlefield)
         total_wounds_by_phase[active_unit.name]['melee'] += defending_unit.calculate_total_wounds()
@@ -68,7 +71,9 @@ def simulate_fight(unit_a, unit_b, active_player, battlefield, initial_distance=
         if not defending_unit.is_alive():
             # Defending unit died in melee
             winner = active_unit.name
-            active_unit.melee_target = None
+            # Remove engagements
+            active_unit.remove_melee_engagement(defending_unit)
+            defending_unit.remove_melee_engagement(active_unit)
             survivors = active_unit.num_models
             return {
                 "winner": winner,

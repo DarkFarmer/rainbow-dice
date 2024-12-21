@@ -260,9 +260,15 @@ def apply_stat_mod(unit, smod, category, applied_stats):
 
 
 def run_simulation():
+    p1_melee_total = 0
+    p1_missile_total = 0
+    p2_melee_total = 0
+    p2_missile_total = 0
+    
     i = 0
     while True:
         i += 1
+        ...
         unit_names = list(unit_templates.keys())
         player1_choices = random.sample(unit_names, 5)
         player2_choices = random.sample(unit_names, 5)
@@ -298,7 +304,22 @@ def run_simulation():
         setup.place_units_randomly(player1, player2)
 
         game.play_game(player1, player2, bf, [],[])
+        # After the game finishes:
+        p1_melee_total += player1.melee_kills
+        p1_missile_total += player1.missile_kills
+        p2_melee_total += player2.melee_kills
+        p2_missile_total += player2.missile_kills
 
+        if i % 100 == 0:
+            print(f"--- After {i} runs ---")
+            print(f"Player1: melee_kills={p1_melee_total}, missile_kills={p1_missile_total}")
+            print(f"Player2: melee_kills={p2_melee_total}, missile_kills={p2_missile_total}")
+
+            # Reset or keep cumulative?
+            # p1_melee_total = 0
+            # p1_missile_total = 0
+            # p2_melee_total = 0
+            # p2_missile_total = 0
         # Determine result
         if player1.score > player2.score:
             winner = "Player1"

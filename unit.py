@@ -22,6 +22,7 @@ class Unit:
         self.armor = armor
         self.movement = movement
         self.ap_cost = ap_cost
+        self.melee_engaged_units = []
         # Ensure we store copies to avoid unintended modifications
         self.base_missile_attack_dice = missile_attack_dice.copy() if missile_attack_dice else []
         self.base_melee_attack_dice = melee_attack_dice.copy() if melee_attack_dice else []
@@ -61,8 +62,15 @@ class Unit:
         return unique_id
 
     def is_locked_in_melee(self):
-        return self.melee_target
+        return len(self.melee_engaged_units) > 0
 
+    def add_melee_engagement(self, other_unit):
+        if other_unit not in self.melee_engaged_units:
+            self.melee_engaged_units.append(other_unit)
+
+    def remove_melee_engagement(self, other_unit):
+        if other_unit in self.melee_engaged_units:
+            self.melee_engaged_units.remove(other_unit)
     def _get_keyword_value(self, keyword, default=None):
         # Extract a value if keyword has a numeric parameter, e.g. "Commander 2"
         for item in self.keywords:
@@ -212,7 +220,15 @@ class Unit:
             # If distance > adjusted_range, no attack. (Assuming you have distance checks)
             # For simplicity, we ignore actual distance checks here.
             pass
-
+        if phase == 'melee':
+                # If not already engaged with any units, no attack
+                if not self.melee_engaged_units:
+                    return
+                # If engaged with multiple units, pick the one with the fewest engagements
+                if len(self.melee_engaged_units) > 1:
+                    target_unit = min(self.melee_engaged_units, key=lambda u: len(u.melee_engaged_units))
+                else:
+                    target_unit = self.melee_engaged_units[0]
         if 'Withering Fire' in effective_keywords and phase == 'missile':
             save_mod += 1
         if 'Relentless' in effective_keywords and phase == 'melee':
@@ -293,6 +309,10 @@ class Unit:
         self.num_models = alive_models
         if alive_models == 0:
             self.alive = False
+            # Remove this unit from others' engagement lists
+            for enemy in self.melee_engaged_units[:]:
+                enemy.remove_melee_engagement(self)
+            self.melee_engaged_units.clear()
             #print(f"{self.name} has been wiped out.")
         #else:
             #print(f"{self.name} has {self.num_models} models remaining.")

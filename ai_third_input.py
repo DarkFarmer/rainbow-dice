@@ -21,12 +21,15 @@ def ai_activate_unit(active_player, opposing_player, battlefield, active_a, turn
         # Disengage
         away_position = (chosen_unit.position[0] + chosen_unit.movement, chosen_unit.position[1] + chosen_unit.movement)
         chosen_unit.position = util.move_towards(chosen_unit.position, away_position, chosen_unit.movement)
-        if chosen_unit.melee_target:
-            chosen_unit.melee_target.melee_target = None
-        chosen_unit.melee_target = None
-    elif chosen_unit.melee_target is not None:
-        # Fight melee
-        melee_fight(chosen_unit, chosen_unit.melee_target, active_player, battlefield)
+        # Remove all melee engagements
+        for enemy in chosen_unit.melee_engaged_units[:]:
+            enemy.remove_melee_engagement(chosen_unit)
+            chosen_unit.remove_melee_engagement(enemy)
+    if chosen_unit.is_locked_in_melee():
+        if chosen_unit.melee_engaged_units:
+            # Choose one engaged enemy (e.g., the first in the list)
+            enemy_target = chosen_unit.melee_engaged_units[0]
+            melee_fight(chosen_unit, enemy_target, active_player, battlefield)
         chosen_unit.has_activated = True
         return chosen_unit
 
@@ -173,9 +176,6 @@ def try_charge(chosen_unit, active_player, opposing_player, battlefield):
 
     if charge_roll >= dist and melee_favorable(chosen_unit, enemy_target):
         simulate_fight(chosen_unit, enemy_target, active_player, battlefield, 0, 'melee', charging=True)
-        chosen_unit.melee_target = enemy_target
-        enemy_target.melee_target = chosen_unit
-
 
 def melee_fight(chosen_unit, enemy_target, active_player, battlefield):
     from fight import simulate_fight

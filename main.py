@@ -56,22 +56,22 @@ ARMOR_TIERS = ['Unarmored', 'Light Armor', 'Medium Armor', 'Heavy Armor']
 # Stats: 0 mods ~50%, 1 mod ~30%, 2 mods ~15%, 3 mods ~4%, 4 mods ~1%
 def num_keywords_to_add():
     x = random.random()
-    if x < 0.7:
+    if x < 0.3:
         return 0
-    elif x < 0.9:
+    elif x < 0.7:
         return 1
     else:
         return 2
 
 def num_stats_to_add():
     x = random.random()
-    if x < 0.5:
+    if x < 0.1:
         return 0
-    elif x < 0.8:
+    elif x < 0.4:
         return 1
-    elif x < 0.95:
+    elif x < 0.60:
         return 2
-    elif x < 0.99:
+    elif x < 0.75:
         return 3
     else:
         return 4

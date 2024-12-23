@@ -1,11 +1,12 @@
 class Player:
-    def __init__(self, name, units):
+    def __init__(self, name, units, is_human=False):
         self.name = name
         self.units = units
         self.score = 0
         self.melee_kills = 0
         self.missile_kills = 0
-        self.remaining_ap = 0  # New attribute to track unused AP
+        self.remaining_ap = 0
+        self.is_human = is_human
 
     def total_ap_on_table(self):
         return sum(unit.ap_cost for unit in self.units if unit.is_alive())

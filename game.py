@@ -21,75 +21,73 @@ def play_game(player_a, player_b, battlefield, stat_costs, keyword_costs):
         #print(f"It's a draw! Final Score: {player_a.score} vs {player_b.score}")
 
 def play_turn(player_a, player_b, battlefield, turn_number):
-    # Determine AP for both
+    # 1) Determine AP for both
     ap_a, ap_b = ap.determine_ap_allocation(player_a, player_b)
 
-    first_player, second_player = (player_a, player_b) if turn_number % 2 == 1 else (player_b, player_a)
-    first_ap, second_ap = (ap_a, ap_b) if first_player == player_a else (ap_b, ap_a)
-    first_player_is_active = turn_number % 2 == 1
+    # By your existing logic, maybe Player A = user, Player B = AI
+    # Or you can decide it differently
+    user_player = player_a
+    ai_player = player_b
 
-    # Reset activation flags
+    # Reset each unit’s has_activated
     for u in player_a.units + player_b.units:
         u.has_activated = False
 
-    # Print board state at start of turn
-    state = get_board_state(player_a, player_b, battlefield, turn_number, first_player if first_player_is_active else second_player)
+    # Print board state at start of turn (optional)
+    state = get_board_state(player_a, player_b, battlefield, turn_number, user_player)
     visualization = get_board_visualization(player_a, player_b, battlefield, state)
-    #print("Board state at start of turn:")
+    #print(f"Board state at start of Turn {turn_number}:")
     #print(visualization)
     #print(f"AP: {player_a.name}={ap_a}, {player_b.name}={ap_b}")
 
-    # Activation loop
-    while first_ap > 0 or second_ap > 0:
-        all_a_done = all(not u.is_alive() or u.has_activated for u in first_player.units)
-        all_b_done = all(not u.is_alive() or u.has_activated for u in second_player.units)
+    # 2) Alternate single activations
+    while True:
+        all_user_done = all(not u.is_alive() or u.has_activated for u in user_player.units)
+        all_ai_done   = all(not u.is_alive() or u.has_activated for u in ai_player.units)
 
-        if all_a_done and all_b_done:
-            #print("All units on both sides activated or dead. Ending turn early.")
+        # If both players have no AP left or all units are done, break
+        if (ap_a <= 0 and ap_b <= 0) or (all_user_done and all_ai_done):
             break
 
-        # If first player cannot activate a unit, we let them spend 1 AP doing nothing
-        if first_ap > 0 and all_a_done:
-            #print(f"{first_player.name} has no units to activate. Forcing AP usage.")
-            first_ap -= 1
+        # A) Human Activation (only if AP left and not all done)
+        if ap_a > 0 and not all_user_done:
+            spent = activate_unit_this_turn(user_player, ai_player, battlefield, ap_a, turn_number)
+            ap_a -= spent
 
-        # If second player cannot activate a unit, we do the same
-        if second_ap > 0 and all_b_done:
-            #print(f"{second_player.name} has no units to activate. Forcing AP usage.")
-            second_ap -= 1
+        # B) AI Activation (only if AP left and not all done)
+        if ap_b > 0 and not all_ai_done:
+            spent = activate_unit_this_turn(ai_player, user_player, battlefield, ap_b, turn_number)
+            ap_b -= spent
 
-        # If after this both have no units and no AP to do anything meaningful, we might just break out
-        if all_a_done and all_b_done:
+        # If we get here and neither side could do anything, break to avoid infinite loop
+        if (ap_a <= 0 or all_user_done) and (ap_b <= 0 or all_ai_done):
             break
 
-        # Try to activate first player's unit if they still have AP and not done
-        if first_ap > 0 and not all_a_done:
-            ap_spent = activate_unit_this_turn(first_player, second_player, battlefield, first_ap, first_player_is_active, turn_number)
-            first_ap -= ap_spent
-
-        # Try to activate second player's unit if they still have AP and not done
-        if second_ap > 0 and not all_b_done:
-            ap_spent = activate_unit_this_turn(second_player, first_player, battlefield, second_ap, not first_player_is_active, turn_number)
-            second_ap -= ap_spent
-
-        # If no progress is made in a loop iteration (no AP spent), consider breaking out.
-        if ap_spent == 0 and all_a_done and all_b_done:
-            # Safety check to avoid infinite loop
-            break
-
-    # Scoring Phase
+    # Scoring after all activations
     score_control_points(player_a, player_b, battlefield)
-    #print(f"End of Turn {turn_number} Scores: {player_a.name}={player_a.score}, {player_b.name}={player_b.score}")
+    print(f"End of Turn {turn_number} Scores: {player_a.name}={player_a.score}, {player_b.name}={player_b.score}")
 
-def activate_unit_this_turn(active_player, opposing_player, battlefield, ap_available, active_a, turn_number):
-    
-    if active_a:
-        chosen_unit = ai_third_input.ai_activate_unit(active_player, opposing_player, battlefield, active_a, turn_number)
+def activate_unit_this_turn(active_player, opposing_player, battlefield, ap_available, turn_number):
+    """
+    Perform exactly one unit activation for 'active_player'.
+    Return the AP cost spent.
+    """
+    if active_player.is_human:
+        from user_input import user_activate_unit
+        chosen_unit = user_activate_unit(
+            active_player, opposing_player, battlefield, 
+            active_a=True,  # or False if you like, not critical now
+            turn_number=turn_number
+        )
     else:
-        chosen_unit = ai_third_input.ai_activate_unit(active_player, opposing_player, battlefield, active_a, turn_number)
-    # After AI moves and optionally attacks/charges, mark AP spent
+        from ai_third_input import ai_activate_unit
+        chosen_unit = ai_activate_unit(
+            active_player, opposing_player, battlefield, 
+            active_a=False,  # or True if you prefer, purely for AI logic
+            turn_number=turn_number
+        )
+
     if chosen_unit:
-        #print(f"{active_player.name}'s unit {chosen_unit.name} spent {chosen_unit.ap_cost} AP this activation.")
         return chosen_unit.ap_cost
     else:
         return 0

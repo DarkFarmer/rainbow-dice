@@ -296,8 +296,8 @@ def run_simulation():
             player2_mods.append((get_category(data["ap_cost"]), kw, st))
             player2_units.append(u)
 
-        player1 = Player(name="Player1", units=player1_units)
-        player2 = Player(name="Player2", units=player2_units)
+        player1 = Player(name="Player1", units=player1_units, is_human=True)
+        player2 = Player(name="Player2", units=player2_units, is_human=False)
 
         control_points, width, height = setup.setup_battlefield()
         bf = battlefield.Battlefield(width, height, control_points, [])

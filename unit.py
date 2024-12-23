@@ -155,12 +155,8 @@ class Unit:
 
     def apply_terrain_effects(self, battlefield, phase='missile'):
         """
-        Check if this unit is in any terrain and apply the effects:
-        - Forest: Add Camouflage and limit attack_range to 8" for missile attacks.
-        - Building: Add Shields 1 on ranged attacks.
-        - Hard Cover: Add Lucky keyword.
-        
-        This will return a set of temporary keywords and possibly adjust attack range.
+        All terrain is treated the same: it gives "Cover" only in the missile phase.
+        No other effects.
         """
         if self.position is None:
             return set(), self.attack_range
@@ -169,39 +165,40 @@ class Unit:
         temp_keywords = set()
         adjusted_range = self.attack_range
 
+        # If not missile phase, do nothing special
+        if phase != 'missile':
+            return temp_keywords, adjusted_range
+
         for terrain in battlefield.terrain_map:
-            # Check if unit is inside this terrain piece
             if (x >= terrain["x"] and x < terrain["x"] + terrain["width"] and
                 y >= terrain["y"] and y < terrain["y"] + terrain["height"]):
-                # Inside this terrain
-                if terrain["type"] == "Forest":
-                    temp_keywords.add("Camouflage")
-                    if phase == 'missile':
-                        adjusted_range = min(adjusted_range, 8)
-                elif terrain["type"] == "Building":
-                    # Shields 1 on ranged attacks
-                    if phase == 'missile':
-                        temp_keywords.add("Shields 1")
-                elif terrain["type"] == "Hard Cover":
-                    temp_keywords.add("Lucky")
+                # The unit is inside some terrain
+                temp_keywords.add("Cover")
+
+                # Since all terrain is identical, we can break after the first match 
+                # (unless you want "stacking" if multiple terrain squares overlap).
+                break
 
         return temp_keywords, adjusted_range
 
     def get_armor_save(self, phase='melee', attacker=None, battlefield=None):
-        # If battlefield provided, apply terrain effects
-        terrain_keywords = set()
-        if battlefield:
-            terrain_keywords, _ = self.apply_terrain_effects(battlefield, phase=phase)
+        # Only check terrain if there's a battlefield and it's the missile phase
+        if battlefield and phase == 'missile':
+            terrain_keywords, _ = self.apply_terrain_effects(battlefield, phase='missile')
+        else:
+            terrain_keywords = set()
 
-        # Combine terrain keywords with unit's keywords for the calculation
+        # Combine terrain keywords with the unit’s own
         effective_keywords = set(self.keywords).union(terrain_keywords)
 
         base_save = ARMOR_SAVES.get(self.armor, 6)
-        # Camouflage check
-        if phase == 'missile' and 'Camouflage' in effective_keywords:
-            if not (attacker and 'Sharpshooter' in attacker.keywords):
-                base_save = base_save - 1
-        # Clamp save
+
+        # If the unit has "Cover" and it's missile phase, improve (i.e. -1 to the roll)
+        # e.g. going from 4+ to 3+, but never better than 2+.
+        if phase == 'missile' and "Cover" in effective_keywords:
+            base_save -= 1
+
+        # Clamp at 2+ as the best possible
         base_save = max(2, base_save)
 
         return base_save, effective_keywords

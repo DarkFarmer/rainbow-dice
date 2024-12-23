@@ -8,9 +8,20 @@ def melee_favorable(attacker, defender):
     """
     return True
 
+import random
+
+def melee_favorable(attacker, defender):
+    """
+    Placeholder for melee favorability logic.
+    Eventually, this might be replaced with a more complex, possibly ML-driven decision.
+    For now, let's just return True.
+    """
+    return True
+
 def simulate_fight(unit_a, unit_b, active_player, battlefield, initial_distance=24, phase='missile', charging=False):
     """
     Simulates a fight between two units, tracking kills and updating active player's stats.
+    Prints combat updates for better insight.
     :param unit_a: The attacking unit.
     :param unit_b: The defending unit.
     :param battlefield: The battlefield object containing terrain info.
@@ -19,6 +30,10 @@ def simulate_fight(unit_a, unit_b, active_player, battlefield, initial_distance=
     :param phase: The phase of the fight ('missile' or 'melee').
     :param charging: Boolean indicating if unit_a is charging (for melee).
     """
+    print(f"\nCombat begins! {unit_a.name} vs {unit_b.name}")
+    print(f"Phase: {'Melee' if phase == 'melee' else 'Missile'} | Charging: {charging}")
+    print(f"{unit_a.name} starting models: {unit_a.num_models}, {unit_b.name} starting models: {unit_b.num_models}")
+
     # Initial conditions
     distance = initial_distance
 
@@ -28,65 +43,75 @@ def simulate_fight(unit_a, unit_b, active_player, battlefield, initial_distance=
         unit_b.name: {'missile': 0, 'melee': 0},
     }
 
-    # For this single attack sequence, unit_a is the active unit and unit_b is defending
-    active_unit = unit_a
-    defending_unit = unit_b
-
     # Perform a single ranged attack if possible
     if phase == 'missile':
         initial_models = unit_b.num_models
+        print(f"{unit_a.name} launches a missile attack!")
         unit_a.attack(unit_b, 'missile', charging=False, battlefield=battlefield)
-        total_wounds_by_phase[active_unit.name]['missile'] += defending_unit.calculate_total_wounds()
+        wounds_inflicted = unit_b.calculate_total_wounds()
+        total_wounds_by_phase[unit_a.name]['missile'] += wounds_inflicted
 
         # Count kills from missile attack
-        models_killed = initial_models - defending_unit.num_models
-        if active_player and models_killed > 0:
+        models_killed = initial_models - unit_b.num_models
+        if models_killed > 0:
+            print(f"{unit_a.name} killed {models_killed} models in the missile phase!")
+        else:
+            print(f"{unit_a.name}'s missile attack had no effect.")
+
+        if active_player:
             active_player.missile_kills += models_killed
 
         # Check if defending unit died from missile attack
-        if not defending_unit.is_alive():
-            winner = active_unit.name
-            survivors = active_unit.num_models
+        if not unit_b.is_alive():
+            print(f"{unit_b.name} has been wiped out by missile fire!")
             return {
-                "winner": winner,
-                "survivors": survivors,
+                "winner": unit_a.name,
+                "survivors": unit_a.num_models,
                 "turns": 1,
                 "wounds_by_phase": total_wounds_by_phase,
             }
+
     # Perform a melee attack if in melee phase
     if phase == 'melee':
         if charging:
+            print(f"{unit_a.name} charges into melee with {unit_b.name}!")
             unit_a.add_melee_engagement(unit_b)
             unit_b.add_melee_engagement(unit_a)
-            
+
         initial_models = unit_b.num_models
+        print(f"{unit_a.name} attacks {unit_b.name} in melee!")
         unit_a.attack(unit_b, 'melee', charging=charging, battlefield=battlefield)
-        total_wounds_by_phase[active_unit.name]['melee'] += defending_unit.calculate_total_wounds()
+        wounds_inflicted = unit_b.calculate_total_wounds()
+        total_wounds_by_phase[unit_a.name]['melee'] += wounds_inflicted
 
         # Count kills from melee attack
-        models_killed = initial_models - defending_unit.num_models
-        if active_player and models_killed > 0:
+        models_killed = initial_models - unit_b.num_models
+        if models_killed > 0:
+            print(f"{unit_a.name} killed {models_killed} models in melee!")
+        else:
+            print(f"{unit_a.name}'s melee attack had no effect.")
+
+        if active_player:
             active_player.melee_kills += models_killed
 
-        if not defending_unit.is_alive():
-            # Defending unit died in melee
-            winner = active_unit.name
-            # Remove engagements
-            active_unit.remove_melee_engagement(defending_unit)
-            defending_unit.remove_melee_engagement(active_unit)
-            survivors = active_unit.num_models
+        # Check if defending unit died from melee attack
+        if not unit_b.is_alive():
+            print(f"{unit_b.name} has been wiped out in melee!")
+            unit_a.remove_melee_engagement(unit_b)
+            unit_b.remove_melee_engagement(unit_a)
             return {
-                "winner": winner,
-                "survivors": survivors,
+                "winner": unit_a.name,
+                "survivors": unit_a.num_models,
                 "turns": 1,
                 "wounds_by_phase": total_wounds_by_phase,
             }
 
     # If we get here, both units are still alive after one sequence of attacks.
-    # No winner this round.
+    print(f"Combat continues! {unit_a.name} and {unit_b.name} are still fighting.")
     return {
         "winner": None,
         "survivors": None,
         "turns": 1,
         "wounds_by_phase": total_wounds_by_phase,
     }
+

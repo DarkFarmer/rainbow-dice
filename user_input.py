@@ -133,7 +133,7 @@ def user_activate_unit(active_player, opposing_player, battlefield, active_a, tu
         if enemy_target:
             print(f"Attacking {enemy_target.name} with missile attack!")
             from fight import simulate_fight
-            simulate_fight(chosen_unit, enemy_target)
+            simulate_fight(chosen_unit, enemy_target, active_player, battlefield)
     else:
         print("No valid enemies in missile range. Skipping missile attack.")
 
@@ -148,7 +148,7 @@ def user_activate_unit(active_player, opposing_player, battlefield, active_a, tu
             print(f"Charge roll: {charge_roll}, Distance: {dist}")
             if charge_roll >= dist and melee_favorable(chosen_unit, enemy_target):
                 print(f"Charging {enemy_target.name} and fighting melee!")
-                simulate_fight(chosen_unit, enemy_target, 0, 'melee')
+                simulate_fight(chosen_unit, enemy_target, active_player, battlefield)
             else:
                 print("Charge failed or not favorable. No melee attack.")
 
@@ -159,7 +159,7 @@ def melee_fight(chosen_unit, enemy_target):
     """Handle melee combat."""
     from fight import simulate_fight
     print(f"{chosen_unit.name} is engaging in melee combat with {enemy_target.name}.")
-    simulate_fight(chosen_unit, enemy_target, 0, 'melee')
+    simulate_fight(chosen_unit, enemy_target,  active_player, battlefield)
 
 def find_unit_by_id_or_name(units, identifier):
     try:

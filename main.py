@@ -92,7 +92,7 @@ unit_templates = {
     },
     "Fast Attack": {
         "num_models": 5, "movement": 12, "armor_save": 6, "wounds": 1,
-        "melee_dice": ["White"], "ranged_dice": ["White"], "range": 12, "ap_cost": 5
+        "melee_dice": ["White"], "ranged_dice": ["White"], "range": 12, "ap_cost": 4
     },
     "Mech": {
         "num_models": 1, "movement": 8, "armor_save": 4, "wounds": 4,
@@ -117,7 +117,7 @@ unit_templates = {
     },
     "Tank": {
         "num_models": 1, "movement": 10, "armor_save": 4, "wounds": 4,
-        "melee_dice": ["Green","Green"], "ranged_dice": ["Black","Green","Green"], "range": 24, "ap_cost": 5
+        "melee_dice": ["Green","Green"], "ranged_dice": ["Black","Green","Green"], "range": 24, "ap_cost": 4
     },
 }
 

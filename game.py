@@ -8,7 +8,7 @@ from board_state import get_board_state, get_board_visualization
 
 def play_game(player_a, player_b, battlefield, stat_costs, keyword_costs):
     # Run a fixed number of turns, for example
-    for turn_number in range(1, 5):
+    for turn_number in range(1, 9):
         #print(f"\n===== START OF TURN {turn_number} =====")
         play_turn(player_a, player_b, battlefield, turn_number)
     adjust_costs_based_on_performance(player_a, player_b, stat_costs, keyword_costs)
@@ -96,8 +96,8 @@ def activate_unit_this_turn(active_player, opposing_player, battlefield, ap_avai
 
 def score_control_points(player_a, player_b, battlefield):
     for i, cp in enumerate(battlefield.control_points, start=1):
-        a_models = util.count_models_in_range(player_a, cp, 6)
-        b_models = util.count_models_in_range(player_b, cp, 6)
+        a_models = adjusted_count_models_in_range(player_a, cp, 3)
+        b_models = adjusted_count_models_in_range(player_b, cp, 3)
         
         if a_models > b_models:
             player_a.score += 1
@@ -150,3 +150,17 @@ def adjust_costs_based_on_performance(player_a, player_b, stat_costs, keyword_co
                     keyword_costs[cat][kw] = max(0.0, keyword_costs[cat][kw] + delta_negative)
                 for st in u.chosen_stats:
                     stat_costs[cat][st] = max(0.0, stat_costs[cat][st] + delta_negative)
+
+def adjusted_count_models_in_range(player, cp, radius):
+    total = 0
+    for u in player.units:
+        if not u.is_alive():
+            continue
+        dist = util.distance(u.position, (cp.x, cp.y))
+        if dist <= radius:
+            # If it's a single-model unit named "Mech" or "Tank", count it as 3
+            if u.initial_num_models == 1 and (u.name == "Mech" or u.name == "Tank"):
+                total += 3
+            else:
+                total += u.num_models
+    return total
